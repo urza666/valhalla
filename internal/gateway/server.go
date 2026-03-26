@@ -58,6 +58,10 @@ type Server struct {
 	sessions map[string]*Session       // sessionID → Session
 	users    map[int64][]*Session       // userID → Sessions (multi-device)
 	guilds   map[int64]map[string]bool  // guildID → set of sessionIDs
+
+	// Presence hooks (set externally to avoid import cycles)
+	OnUserOnline  func(userID int64)
+	OnUserOffline func(userID int64)
 }
 
 // NewServer creates a new gateway server.
@@ -143,6 +147,10 @@ func (s *Server) Unregister(session *Session) {
 	}
 	if len(s.users[session.UserID]) == 0 {
 		delete(s.users, session.UserID)
+		// Last session for this user — mark offline
+		if s.OnUserOffline != nil {
+			s.OnUserOffline(session.UserID)
+		}
 	}
 
 	// Remove from guild subscriptions

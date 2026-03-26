@@ -8,18 +8,25 @@ interface Props {
   guildId: string;
 }
 
-// Cache for user display names so we don't refetch constantly
-const userNameCache = new Map<string, string>();
+// Cache for user info so we don't refetch constantly
+interface UserInfo {
+  name: string;
+  avatar: string | null;
+}
+const userInfoCache = new Map<string, UserInfo>();
 
-async function resolveUserName(userId: string): Promise<string> {
-  if (userNameCache.has(userId)) return userNameCache.get(userId)!;
+async function resolveUserInfo(userId: string): Promise<UserInfo> {
+  if (userInfoCache.has(userId)) return userInfoCache.get(userId)!;
   try {
     const profile = await api.getUserProfile(userId);
-    const name = profile.display_name || profile.username || userId.slice(-4);
-    userNameCache.set(userId, name);
-    return name;
+    const info: UserInfo = {
+      name: profile.display_name || profile.username || userId.slice(-4),
+      avatar: profile.avatar,
+    };
+    userInfoCache.set(userId, info);
+    return info;
   } catch {
-    return `User ${userId.slice(-4)}`;
+    return { name: `User ${userId.slice(-4)}`, avatar: null };
   }
 }
 
@@ -27,7 +34,7 @@ export function VoiceChannel({ channelId, guildId }: Props) {
   const { connected, channelId: currentChannelId, channelVoiceStates, joinChannel } = useVoiceStore();
   const { gateway, user } = useAuthStore();
   const { handleVoiceStateUpdate } = useVoiceStore();
-  const [userNames, setUserNames] = useState<Map<string, string>>(new Map());
+  const [userInfos, setUserInfos] = useState<Map<string, UserInfo>>(new Map());
 
   const isThisChannel = connected && currentChannelId === channelId;
   const usersInChannel = channelVoiceStates.filter((s) => s.channel_id === channelId);
@@ -40,25 +47,27 @@ export function VoiceChannel({ channelId, guildId }: Props) {
     return () => { unsub(); };
   }, [gateway, handleVoiceStateUpdate]);
 
-  // Resolve user names for all users in channel
+  // Resolve user info for all users in channel
   useEffect(() => {
     const resolve = async () => {
-      const newNames = new Map(userNames);
+      const newInfos = new Map(userInfos);
       let changed = false;
       for (const state of usersInChannel) {
-        if (!newNames.has(state.user_id)) {
-          // Check if it's the current user
+        if (!newInfos.has(state.user_id)) {
           if (state.user_id === user?.id) {
-            newNames.set(state.user_id, user.display_name || user.username);
+            newInfos.set(state.user_id, {
+              name: user.display_name || user.username,
+              avatar: user.avatar,
+            });
             changed = true;
           } else {
-            const name = await resolveUserName(state.user_id);
-            newNames.set(state.user_id, name);
+            const info = await resolveUserInfo(state.user_id);
+            newInfos.set(state.user_id, info);
             changed = true;
           }
         }
       }
-      if (changed) setUserNames(newNames);
+      if (changed) setUserInfos(newInfos);
     };
     if (usersInChannel.length > 0) resolve();
   }, [usersInChannel.map(u => u.user_id).join(',')]);
@@ -78,16 +87,25 @@ export function VoiceChannel({ channelId, guildId }: Props) {
       )}
 
       {usersInChannel.map((state) => {
-        const displayName = userNames.get(state.user_id) || state.user_id.slice(-4);
+        const info = userInfos.get(state.user_id) || { name: state.user_id.slice(-4), avatar: null };
         return (
           <div key={state.user_id} className="voice-user">
             <div className="voice-user-avatar">
-              <div className={`voice-user-ring ${state.self_mute ? '' : 'speaking-capable'}`}>
-                {displayName[0].toUpperCase()}
-              </div>
+              {info.avatar ? (
+                <img
+                  src={`/api/v1/attachments/${info.avatar}`}
+                  alt=""
+                  className="voice-user-avatar-img"
+                  style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                <div className={`voice-user-ring ${state.self_mute ? '' : 'speaking-capable'}`}>
+                  {info.name[0].toUpperCase()}
+                </div>
+              )}
             </div>
             <span className="voice-user-name">
-              {displayName}
+              {info.name}
               {state.self_mute && ' 🔇'}
               {state.self_deaf && ' 🔕'}
               {state.self_video && ' 📷'}

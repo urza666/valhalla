@@ -21,6 +21,7 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/channel"
 	"github.com/valhalla-chat/valhalla/internal/config"
 	"github.com/valhalla-chat/valhalla/internal/eventbus"
+	"github.com/valhalla-chat/valhalla/internal/presence"
 	"github.com/valhalla-chat/valhalla/pkg/events"
 	"github.com/valhalla-chat/valhalla/internal/dm"
 	"github.com/valhalla-chat/valhalla/internal/gateway"
@@ -78,6 +79,15 @@ func main() {
 	gateway.SetAllowedOrigins(cfg.AllowedOrigins)
 	gwServer := gateway.NewServer(ctx, authService, idGen, resumeURL)
 	go gwServer.StartHeartbeatChecker()
+
+	// Presence tracking (online/idle/dnd/offline)
+	presenceService := presence.NewService()
+	gwServer.OnUserOnline = func(userID int64) {
+		presenceService.SetOnline(userID)
+	}
+	gwServer.OnUserOffline = func(userID int64) {
+		presenceService.SetOffline(userID)
+	}
 
 	// NATS event bus — enables horizontal scaling of API + Gateway
 	var dispatcher events.EventDispatcher = gwServer // Default: local-only dispatch

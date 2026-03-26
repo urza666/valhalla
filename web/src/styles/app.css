@@ -2124,3 +2124,200 @@ select:focus-visible {
 .skip-nav:focus {
   top: 0;
 }
+
+/* =========================
+   Enhanced Responsive Design
+   ========================= */
+
+/* Touch devices: bigger tap targets */
+@media (hover: none) and (pointer: coarse) {
+  button, .btn, .btn-small, .friends-tab, .settings-tab {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .composer-action {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 18px;
+  }
+
+  .channel-item {
+    padding: 10px 12px;
+    min-height: 42px;
+  }
+
+  .member-item {
+    padding: 8px 12px;
+    min-height: 44px;
+  }
+
+  .msg-action-bar button {
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 16px;
+  }
+
+  .voice-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .emoji-btn {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 22px;
+  }
+}
+
+/* Small mobile: full-width everything */
+@media (max-width: 480px) {
+  .chat-header {
+    padding: 8px 12px;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .chat-header-topic {
+    display: none;
+  }
+
+  .composer {
+    padding: 6px;
+    gap: 4px;
+  }
+
+  .composer-input {
+    font-size: 16px; /* prevents iOS zoom on focus */
+  }
+
+  .emoji-picker-full {
+    width: calc(100vw - 24px);
+    max-height: 50vh;
+  }
+
+  .user-popout {
+    position: fixed !important;
+    left: 12px !important;
+    right: 12px !important;
+    top: auto !important;
+    bottom: 12px !important;
+    width: auto !important;
+  }
+
+  .modal-backdrop .auth-form,
+  .modal-backdrop .settings-panel {
+    width: calc(100vw - 24px) !important;
+    max-width: 100% !important;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .settings-panel {
+    flex-direction: column;
+    height: auto;
+    max-height: 90vh;
+  }
+
+  .settings-sidebar {
+    flex-direction: row;
+    overflow-x: auto;
+    width: 100%;
+    min-width: 0;
+    padding: 8px;
+    gap: 4px;
+  }
+
+  .settings-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .kanban-columns {
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px;
+  }
+
+  .kanban-column {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100%;
+  }
+
+  .voice-bar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .voice-bar-controls {
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .lk-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .search-panel {
+    width: 100%;
+    right: 0;
+  }
+
+  .wiki-container {
+    flex-direction: column;
+  }
+
+  .wiki-sidebar {
+    width: 100%;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+}
+
+/* Medium screens: hide member list, adjust layout */
+@media (max-width: 1024px) {
+  .member-list {
+    display: none;
+  }
+
+  .chat-header-topic {
+    max-width: 150px;
+  }
+}
+
+/* Tablet-only adjustments */
+@media (min-width: 481px) and (max-width: 768px) {
+  .guild-sidebar {
+    width: 56px;
+  }
+
+  .guild-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+  }
+
+  .channel-sidebar {
+    width: 200px;
+  }
+}
+
+/* Voice user avatar image */
+.voice-user-avatar-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Reaction style refresh */
+.msg-reaction {
+  transition: transform 0.1s, background 0.1s;
+}
+
+.msg-reaction:active {
+  transform: scale(0.92);
+}

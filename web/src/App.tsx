@@ -14,7 +14,7 @@ import type { Message } from './api/client';
 
 export function App() {
   const { user, gateway, isLoading, restore } = useAuthStore();
-  const { addMessage, updateMessage, removeMessage, selectedChannelId, loadGuilds } = useAppStore();
+  const { addMessage, updateMessage, removeMessage, addReaction, removeReaction, selectedChannelId, loadGuilds } = useAppStore();
   const { sendNotification } = useSettingsStore();
   const { incrementUnread } = useUnreadStore();
   const [inviteHandled, setInviteHandled] = useState(false);
@@ -79,10 +79,19 @@ export function App() {
         const { id, channel_id } = data as { id: string; channel_id: string };
         removeMessage(channel_id, id);
       }),
+      // Real-time reaction updates
+      gateway.on('MESSAGE_REACTION_ADD', (data) => {
+        const { channel_id, message_id, emoji, user_id } = data as { channel_id: string; message_id: string; emoji: string; user_id: string };
+        addReaction(channel_id, message_id, emoji, user_id);
+      }),
+      gateway.on('MESSAGE_REACTION_REMOVE', (data) => {
+        const { channel_id, message_id, emoji, user_id } = data as { channel_id: string; message_id: string; emoji: string; user_id: string };
+        removeReaction(channel_id, message_id, emoji, user_id);
+      }),
     ];
 
     return () => unsubs.forEach((unsub) => unsub());
-  }, [gateway, addMessage, updateMessage, removeMessage, selectedChannelId, user?.id, incrementUnread, sendNotification]);
+  }, [gateway, addMessage, updateMessage, removeMessage, addReaction, removeReaction, selectedChannelId, user?.id, incrementUnread, sendNotification]);
 
   if (isLoading) {
     return (

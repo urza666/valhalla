@@ -169,6 +169,11 @@ func (r *Repository) GetAuthorID(ctx context.Context, id int64) (int64, error) {
 // --- Reactions ---
 
 func (r *Repository) AddReaction(ctx context.Context, messageID, userID int64, emoji string) error {
+	// Enforce: only one reaction per user per message — remove any existing reaction first
+	_, _ = r.db.Exec(ctx, `
+		DELETE FROM reactions WHERE message_id = $1 AND user_id = $2
+	`, messageID, userID)
+
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING

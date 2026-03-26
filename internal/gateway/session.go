@@ -152,6 +152,11 @@ func (s *Session) handleIdentify(data json.RawMessage) {
 	// Register the session for event routing
 	s.Server.Register(s)
 
+	// Mark user as online
+	if s.Server.OnUserOnline != nil {
+		s.Server.OnUserOnline(user.ID)
+	}
+
 	// Send READY event
 	ready := events.ReadyData{
 		Version:          1,

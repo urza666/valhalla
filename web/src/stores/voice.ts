@@ -136,30 +136,40 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   toggleVideo: async () => {
     const newVideo = !get().selfVideo;
     const room = get().lkRoom;
-    // Must call LiveKit directly from user gesture context (click handler)
-    if (room?.localParticipant) {
-      try {
-        await room.localParticipant.setCameraEnabled(newVideo);
-        set({ selfVideo: newVideo });
-        api.updateVoiceStateFull({ self_video: newVideo }).catch(() => {});
-      } catch (err) {
-        console.error('Camera toggle failed:', err);
-      }
+    if (!room?.localParticipant) {
+      // Import toast dynamically to avoid circular dependency
+      const { toast } = await import('./toast');
+      toast.error('Kamera nicht verfügbar — bitte erst einem Sprachkanal beitreten');
+      return;
+    }
+    try {
+      await room.localParticipant.setCameraEnabled(newVideo);
+      set({ selfVideo: newVideo });
+      api.updateVoiceStateFull({ self_video: newVideo }).catch(() => {});
+    } catch (err) {
+      console.error('Camera toggle failed:', err);
+      const { toast } = await import('./toast');
+      toast.error('Kamera konnte nicht aktiviert werden');
     }
   },
 
   toggleStream: async () => {
     const newStream = !get().selfStream;
     const room = get().lkRoom;
-    // Must call LiveKit directly from user gesture context (click handler)
-    if (room?.localParticipant) {
-      try {
-        await room.localParticipant.setScreenShareEnabled(newStream);
-        set({ selfStream: newStream });
-        api.updateVoiceStateFull({ self_stream: newStream }).catch(() => {});
-      } catch (err) {
-        console.error('Screen share toggle failed:', err);
-        // User cancelled the screen share picker
+    if (!room?.localParticipant) {
+      const { toast } = await import('./toast');
+      toast.error('Bildschirmfreigabe nicht verfügbar — bitte erst einem Sprachkanal beitreten');
+      return;
+    }
+    try {
+      await room.localParticipant.setScreenShareEnabled(newStream);
+      set({ selfStream: newStream });
+      api.updateVoiceStateFull({ self_stream: newStream }).catch(() => {});
+    } catch (err) {
+      console.error('Screen share toggle failed:', err);
+      // User cancelled the picker — not an error, just reset state
+      if (get().selfStream !== !newStream) {
+        set({ selfStream: !newStream });
       }
     }
   },

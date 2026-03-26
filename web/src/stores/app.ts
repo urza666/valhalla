@@ -21,6 +21,8 @@ interface AppState {
   addMessage: (message: Message) => void;
   updateMessage: (message: Message) => void;
   removeMessage: (channelId: string, messageId: string) => void;
+  addReaction: (channelId: string, messageId: string, emoji: string, userId: string) => void;
+  removeReaction: (channelId: string, messageId: string, emoji: string, userId: string) => void;
   createGuild: (name: string) => Promise<void>;
 }
 
@@ -102,6 +104,77 @@ export const useAppStore = create<AppState>((set, get) => ({
       const newMessages = new Map(state.messages);
       const channelMsgs = newMessages.get(channelId) || [];
       newMessages.set(channelId, channelMsgs.filter((m) => m.id !== messageId));
+      return { messages: newMessages };
+    });
+  },
+
+  // Real-time reaction updates from WebSocket
+  addReaction: (channelId, messageId, emoji, userId) => {
+    set((state) => {
+      const newMessages = new Map(state.messages);
+      const channelMsgs = newMessages.get(channelId);
+      if (!channelMsgs) return state;
+
+      const msgIdx = channelMsgs.findIndex((m) => m.id === messageId);
+      if (msgIdx === -1) return state;
+
+      const msg = { ...channelMsgs[msgIdx] };
+      const reactions = [...(msg.reactions || [])];
+      const isMe = userId === api.getToken() ? false : true; // approximate
+
+      // One reaction per user: remove user's previous reaction from other emojis
+      for (let i = reactions.length - 1; i >= 0; i--) {
+        if (reactions[i].emoji !== emoji && reactions[i].me) {
+          reactions[i] = { ...reactions[i], count: Math.max(0, reactions[i].count - 1), me: false };
+          if (reactions[i].count === 0) reactions.splice(i, 1);
+        }
+      }
+
+      // Add/increment the new emoji reaction
+      const existing = reactions.find((r) => r.emoji === emoji);
+      if (existing) {
+        const idx = reactions.indexOf(existing);
+        reactions[idx] = { ...existing, count: existing.count + 1, me: existing.me || isMe };
+      } else {
+        reactions.push({ emoji, count: 1, me: isMe });
+      }
+
+      msg.reactions = reactions;
+      const updated = [...channelMsgs];
+      updated[msgIdx] = msg;
+      newMessages.set(channelId, updated);
+      return { messages: newMessages };
+    });
+  },
+
+  removeReaction: (channelId, messageId, emoji, _userId) => {
+    set((state) => {
+      const newMessages = new Map(state.messages);
+      const channelMsgs = newMessages.get(channelId);
+      if (!channelMsgs) return state;
+
+      const msgIdx = channelMsgs.findIndex((m) => m.id === messageId);
+      if (msgIdx === -1) return state;
+
+      const msg = { ...channelMsgs[msgIdx] };
+      let reactions = [...(msg.reactions || [])];
+
+      const existing = reactions.find((r) => r.emoji === emoji);
+      if (existing) {
+        const newCount = existing.count - 1;
+        if (newCount <= 0) {
+          reactions = reactions.filter((r) => r.emoji !== emoji);
+        } else {
+          reactions = reactions.map((r) =>
+            r.emoji === emoji ? { ...r, count: newCount, me: false } : r
+          );
+        }
+      }
+
+      msg.reactions = reactions;
+      const updated = [...channelMsgs];
+      updated[msgIdx] = msg;
+      newMessages.set(channelId, updated);
       return { messages: newMessages };
     });
   },
