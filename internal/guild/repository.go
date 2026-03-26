@@ -122,6 +122,7 @@ func (r *Repository) AddMember(ctx context.Context, userID, guildID int64) (*Mem
 
 func (r *Repository) GetMember(ctx context.Context, userID, guildID int64) (*Member, error) {
 	var m Member
+	m.User = &MemberUser{}
 	err := r.db.QueryRow(ctx, `
 		SELECT m.user_id, m.guild_id, m.nickname, m.avatar_hash,
 		       m.joined_at, m.deaf, m.mute, m.pending, m.timeout_until,

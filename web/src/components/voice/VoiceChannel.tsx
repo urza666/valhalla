@@ -18,9 +18,10 @@ export function VoiceChannel({ channelId, guildId }: Props) {
   // Listen for voice state updates
   useEffect(() => {
     if (!gateway) return;
-    return gateway.on('VOICE_STATE_UPDATE', (data) => {
+    const unsub = gateway.on('VOICE_STATE_UPDATE', (data) => {
       handleVoiceStateUpdate(data as any);
     });
+    return () => { unsub(); };
   }, [gateway, handleVoiceStateUpdate]);
 
   return (

@@ -44,6 +44,9 @@ services:
       - "${API_PORT:-8080}:8080"
     env_file: .env
     environment:
+      # Override internal port to always be 8080 inside container
+      API_PORT: "8080"
+      API_HOST: "0.0.0.0"
       DATABASE_URL: "postgres://${DB_USER:-valhalla}:${DB_PASSWORD:-valhalla}@postgres:5432/${DB_NAME:-valhalla}?sslmode=disable"
       REDIS_URL: "redis://:${REDIS_PASSWORD:-valhalla}@redis:6379/0"
       NATS_URL: "nats://nats:4222"
@@ -122,8 +125,8 @@ services:
   livekit:
     image: livekit/livekit-server:latest
     ports:
-      - "7881:7881"       # WebRTC TCP
-      - "7882:7882/udp"   # WebRTC UDP
+      - "${LK_TCP_PORT:-7891}:7881"       # WebRTC TCP
+      - "${LK_UDP_PORT:-7892}:7882/udp"   # WebRTC UDP
     command: >
       --dev
       --bind 0.0.0.0

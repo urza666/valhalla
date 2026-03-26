@@ -5,12 +5,10 @@ echo "════════════════════════�
 echo "  Valhalla API Server"
 echo "══════════════════════════════════════"
 
-# Wait for PostgreSQL to be ready
-echo "Waiting for PostgreSQL..."
-until curl -sf "http://${DB_HOST:-postgres}:${DB_PORT:-5432}" >/dev/null 2>&1 || pg_isready -h "${DB_HOST:-postgres}" -p "${DB_PORT:-5432}" >/dev/null 2>&1; do
-    sleep 1
-done 2>/dev/null || sleep 5
-echo "PostgreSQL is ready."
+# docker-compose depends_on with healthcheck ensures PG is ready,
+# but add a small buffer for the TCP listener to stabilize
+echo "Waiting for database..."
+sleep 5
 
 # Run database migrations
 echo "Running database migrations..."

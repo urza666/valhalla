@@ -19,7 +19,7 @@ export function TypingIndicator({ channelId }: Props) {
     if (!gateway) return;
 
     const unsub = gateway.on('TYPING_START', (data: unknown) => {
-      const { channel_id, user_id, timestamp } = data as {
+      const { channel_id, user_id } = data as {
         channel_id: string;
         user_id: string;
         timestamp: number;

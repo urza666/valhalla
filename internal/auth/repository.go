@@ -85,19 +85,28 @@ func (r *PostgresRepository) UsernameExists(ctx context.Context, username string
 }
 
 func (r *PostgresRepository) CreateSession(ctx context.Context, token string, userID int64, deviceInfo, ip string, expiresAt time.Time) error {
+	// Handle empty IP address (cast to NULL instead of invalid inet)
+	var ipParam interface{}
+	if ip != "" {
+		ipParam = ip
+	}
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO sessions (token, user_id, device_info, ip_address, expires_at)
 		VALUES ($1, $2, $3, $4::inet, $5)
-	`, token, userID, deviceInfo, ip, expiresAt)
+	`, token, userID, deviceInfo, ipParam, expiresAt)
 	return err
 }
 
 func (r *PostgresRepository) GetSession(ctx context.Context, token string) (*Session, error) {
 	var s Session
+	var ipAddr *string
 	err := r.db.QueryRow(ctx, `
 		SELECT token, user_id, device_info, ip_address::text, created_at, expires_at
 		FROM sessions WHERE token = $1
-	`, token).Scan(&s.Token, &s.UserID, &s.DeviceInfo, &s.IPAddress, &s.CreatedAt, &s.ExpiresAt)
+	`, token).Scan(&s.Token, &s.UserID, &s.DeviceInfo, &ipAddr, &s.CreatedAt, &s.ExpiresAt)
+	if ipAddr != nil {
+		s.IPAddress = *ipAddr
+	}
 	if err != nil {
 		return nil, err
 	}

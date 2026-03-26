@@ -4,17 +4,14 @@ import {
   RoomEvent,
   Track,
   RemoteTrackPublication,
-  RemoteParticipant,
-  LocalParticipant,
   Participant,
   VideoPresets,
-  createLocalTracks,
 } from 'livekit-client';
 import { useVoiceStore } from '../../stores/voice';
 
 // LiveKitRoom handles the actual WebRTC connection via LiveKit.
 export function LiveKitRoom() {
-  const { connected, lkToken, lkEndpoint, selfMute, selfDeaf, channelId } = useVoiceStore();
+  const { connected, lkToken, lkEndpoint, selfMute } = useVoiceStore();
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [screenShareTrack, setScreenShareTrack] = useState<RemoteTrackPublication | null>(null);

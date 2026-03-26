@@ -46,6 +46,7 @@ export function ChannelSidebar({ guild, user, onLogout }: Props) {
                 <ChannelItem
                   key={ch.id}
                   channel={ch}
+                  guildId={guild.id}
                   active={ch.id === selectedChannelId}
                   onClick={() => selectChannel(ch.id)}
                 />
