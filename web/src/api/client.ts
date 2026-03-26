@@ -234,6 +234,10 @@ class APIClient {
     return this.request<void>('DELETE', `/guilds/${guildId}`);
   }
 
+  leaveGuild(guildId: string) {
+    return this.request<void>('DELETE', `/guilds/${guildId}/members/@me`);
+  }
+
   deleteChannel(channelId: string) {
     return this.request<void>('DELETE', `/channels/${channelId}`);
   }

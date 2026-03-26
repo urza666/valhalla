@@ -2048,3 +2048,79 @@ select:focus-visible {
 .toast-info {
   background: var(--brand-primary);
 }
+
+/* =========================
+   Drag & Drop File Overlay
+   ========================= */
+.drag-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(88, 101, 242, 0.15);
+  border: 3px dashed var(--brand-primary);
+  border-radius: 8px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.drag-overlay-inner {
+  text-align: center;
+  color: var(--text-primary);
+}
+
+/* =========================
+   Guild Unread Badge
+   ========================= */
+.guild-unread-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 9px;
+  padding: 0 4px;
+  border: 2px solid var(--bg-tertiary);
+  pointer-events: none;
+}
+
+/* =========================
+   Chat Header Topic
+   ========================= */
+.chat-header-topic {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-left: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+/* =========================
+   Skip Navigation (a11y)
+   ========================= */
+.skip-nav {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: var(--brand-primary);
+  color: #fff;
+  padding: 8px 16px;
+  z-index: 10000;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-nav:focus {
+  top: 0;
+}

@@ -6,6 +6,7 @@ import { AuthPage } from './components/layout/AuthPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ToastContainer } from './components/common/ToastContainer';
 import { KeyboardShortcuts } from './components/common/KeyboardShortcuts';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useUnreadStore } from './stores/unread';
 import { api } from './api/client';
 import { toast } from './stores/toast';
@@ -99,10 +100,10 @@ export function App() {
   }
 
   return (
-    <>
+    <ErrorBoundary>
       <AppLayout />
       <ToastContainer />
       <KeyboardShortcuts />
-    </>
+    </ErrorBoundary>
   );
 }
