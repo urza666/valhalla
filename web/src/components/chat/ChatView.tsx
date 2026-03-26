@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/app';
 import { api } from '../../api/client';
 import { TypingIndicator } from './TypingIndicator';
 import { Markdown } from './Markdown';
+import { Composer } from './Composer';
 import type { Message } from '../../api/client';
 
 interface Props {
@@ -12,11 +13,8 @@ interface Props {
 export function ChatView({ channelId }: Props) {
   const { messages, loadMessages, channels, selectedGuildId } = useAppStore();
   const channelMessages = messages.get(channelId) || [];
-  const [input, setInput] = useState('');
-  const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get channel name
   const guildChannels = channels.get(selectedGuildId || '') || [];
   const channel = guildChannels.find((c) => c.id === channelId);
 
@@ -24,12 +22,11 @@ export function ChatView({ channelId }: Props) {
     loadMessages(channelId);
   }, [channelId, loadMessages]);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [channelMessages.length]);
 
-  // Typing indicator throttle (send at most every 10s)
+  // Typing indicator throttle
   const lastTypingSent = useRef(0);
   const sendTyping = useCallback(() => {
     const now = Date.now();
@@ -38,28 +35,6 @@ export function ChatView({ channelId }: Props) {
       api.sendTyping(channelId).catch(() => {});
     }
   }, [channelId]);
-
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || sending) return;
-
-    setSending(true);
-    try {
-      await api.sendMessage(channelId, input.trim());
-      setInput('');
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(e);
-    }
-  };
 
   return (
     <div className="chat-area">
@@ -76,8 +51,8 @@ export function ChatView({ channelId }: Props) {
       <div className="messages-container">
         {channelMessages.length === 0 ? (
           <div className="empty-state">
-            <h2>Welcome to #{channel?.name}</h2>
-            <p>This is the beginning of the channel.</p>
+            <h2>Willkommen in #{channel?.name}</h2>
+            <p>Das ist der Anfang des Kanals. Schreibe die erste Nachricht!</p>
           </div>
         ) : (
           channelMessages.map((msg, i) => (
@@ -89,20 +64,11 @@ export function ChatView({ channelId }: Props) {
 
       <TypingIndicator channelId={channelId} />
 
-      <form className="composer" onSubmit={handleSend}>
-        <input
-          className="composer-input"
-          placeholder={`Message #${channel?.name || ''}`}
-          value={input}
-          onChange={(e) => {
-            setInput(e.target.value);
-            if (e.target.value.length > 0) sendTyping();
-          }}
-          onKeyDown={handleKeyDown}
-          maxLength={4000}
-          autoFocus
-        />
-      </form>
+      <Composer
+        channelId={channelId}
+        channelName={channel?.name || ''}
+        onTyping={sendTyping}
+      />
     </div>
   );
 }
@@ -136,7 +102,6 @@ function MessageItem({ message, showHeader }: { message: Message; showHeader: bo
   );
 }
 
-// Group messages from same author within 7 minutes
 function shouldShowHeader(messages: Message[], index: number): boolean {
   if (index === 0) return true;
   const prev = messages[index - 1];
