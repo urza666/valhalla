@@ -4,6 +4,7 @@ import { useAppStore } from './stores/app';
 import { useSettingsStore } from './stores/settings';
 import { AuthPage } from './components/layout/AuthPage';
 import { AppLayout } from './components/layout/AppLayout';
+import { ToastContainer } from './components/common/ToastContainer';
 import type { Message } from './api/client';
 
 export function App() {
@@ -47,7 +48,10 @@ export function App() {
   if (isLoading) {
     return (
       <div className="auth-container">
-        <div style={{ color: 'var(--text-muted)' }}>Loading...</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+          <div className="loading-spinner large" />
+          <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Verbindung wird hergestellt...</div>
+        </div>
       </div>
     );
   }
@@ -56,5 +60,10 @@ export function App() {
     return <AuthPage />;
   }
 
-  return <AppLayout />;
+  return (
+    <>
+      <AppLayout />
+      <ToastContainer />
+    </>
+  );
 }

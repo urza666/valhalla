@@ -3,6 +3,7 @@ type EventHandler = (data: unknown) => void;
 const OP_DISPATCH = 0;
 const OP_HEARTBEAT = 1;
 const OP_IDENTIFY = 2;
+const OP_RESUME = 6;
 const OP_HELLO = 10;
 const OP_HEARTBEAT_ACK = 11;
 
@@ -16,6 +17,7 @@ export class GatewaySocket {
   private listeners = new Map<string, Set<EventHandler>>();
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 10;
+  private canResume = false;
 
   constructor(token: string) {
     this.token = token;
@@ -41,10 +43,15 @@ export class GatewaySocket {
       console.log('[Gateway] Disconnected', event.code, event.reason);
       this.cleanup();
 
+      // Don't resume on intentional disconnect (code 1000) or auth failure (4004)
+      if (event.code === 1000 || event.code === 4004) {
+        this.canResume = false;
+      }
+
       if (this.reconnectAttempts < this.maxReconnectAttempts) {
         const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 60000);
         const jitter = Math.random() * 1000;
-        console.log(`[Gateway] Reconnecting in ${delay + jitter}ms...`);
+        console.log(`[Gateway] Reconnecting in ${Math.round(delay + jitter)}ms (attempt ${this.reconnectAttempts + 1})...`);
         setTimeout(() => {
           this.reconnectAttempts++;
           this.connect();
@@ -59,6 +66,7 @@ export class GatewaySocket {
 
   disconnect() {
     this.maxReconnectAttempts = 0;
+    this.canResume = false;
     this.ws?.close(1000, 'Client disconnect');
     this.cleanup();
   }
@@ -98,24 +106,41 @@ export class GatewaySocket {
       this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatInterval!);
     }, jitter);
 
-    // Identify
-    this.send({
-      op: OP_IDENTIFY,
-      d: {
-        token: this.token,
-        properties: {
-          os: navigator.platform,
-          browser: 'valhalla-web',
+    // Try to resume if we have a session, otherwise identify fresh
+    if (this.canResume && this.sessionId && this.sequence !== null) {
+      console.log('[Gateway] Attempting resume, session:', this.sessionId, 'seq:', this.sequence);
+      this.send({
+        op: OP_RESUME,
+        d: {
+          token: this.token,
+          session_id: this.sessionId,
+          seq: this.sequence,
         },
-      },
-    });
+      });
+    } else {
+      this.send({
+        op: OP_IDENTIFY,
+        d: {
+          token: this.token,
+          properties: {
+            os: navigator.platform,
+            browser: 'valhalla-web',
+          },
+        },
+      });
+    }
   }
 
   private handleDispatch(eventName: string, data: unknown) {
     if (eventName === 'READY') {
       const ready = data as { session_id: string; user: unknown; guilds: unknown[] };
       this.sessionId = ready.session_id;
+      this.canResume = true;
       console.log('[Gateway] Ready, session:', this.sessionId);
+    }
+
+    if (eventName === 'RESUMED') {
+      console.log('[Gateway] Session resumed successfully');
     }
 
     // Emit to listeners

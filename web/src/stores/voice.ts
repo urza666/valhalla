@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { api } from '../api/client';
 
 interface VoiceState {
   guild_id: string;
@@ -40,15 +41,7 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
 
   joinChannel: async (guildId, channelId) => {
     try {
-      const res = await fetch(`/api/v1/channels/${channelId}/voice/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ guild_id: guildId }),
-      });
-      const data = await res.json();
+      const data = await api.joinVoice(channelId, guildId);
 
       set({
         connected: true,
@@ -69,12 +62,7 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
     if (!channelId) return;
 
     try {
-      await fetch(`/api/v1/channels/${channelId}/voice/leave`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
+      await api.leaveVoice(channelId);
     } catch {
       // Best effort
     }
@@ -94,32 +82,16 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   toggleMute: async () => {
     const newMute = !get().selfMute;
     set({ selfMute: newMute });
-
-    await fetch('/api/v1/voice/state', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({ self_mute: newMute }),
-    }).catch(() => {});
+    api.updateVoiceState({ self_mute: newMute }).catch(() => {});
   },
 
   toggleDeaf: async () => {
     const newDeaf = !get().selfDeaf;
     set({
       selfDeaf: newDeaf,
-      selfMute: newDeaf ? true : get().selfMute, // deaf implies mute
+      selfMute: newDeaf ? true : get().selfMute,
     });
-
-    await fetch('/api/v1/voice/state', {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify({ self_deaf: newDeaf }),
-    }).catch(() => {});
+    api.updateVoiceState({ self_deaf: newDeaf }).catch(() => {});
   },
 
   updateVoiceStates: (states) => {

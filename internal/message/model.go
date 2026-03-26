@@ -54,10 +54,11 @@ type Attachment struct {
 }
 
 type CreateMessageRequest struct {
-	Content     string  `json:"content"`
-	Nonce       *string `json:"nonce,omitempty"`
-	TTS         bool    `json:"tts"`
-	ReferenceID *int64  `json:"message_reference,string,omitempty"`
+	Content       string  `json:"content"`
+	Nonce         *string `json:"nonce,omitempty"`
+	TTS           bool    `json:"tts"`
+	ReferenceID   *int64  `json:"message_reference,string,omitempty"`
+	AttachmentIDs []int64 `json:"attachment_ids,omitempty"`
 }
 
 type UpdateMessageRequest struct {

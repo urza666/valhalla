@@ -20,10 +20,10 @@ export function MemberList({ guildId }: Props) {
 
   if (loading) {
     return (
-      <div className="member-list">
-        <div className="member-list-header">Members</div>
-        <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 14 }}>Loading...</div>
-      </div>
+      <aside className="member-list" aria-label="Mitglieder">
+        <div className="member-list-header">Mitglieder</div>
+        <div style={{ padding: 16, color: 'var(--text-muted)', fontSize: 14 }}>Laden...</div>
+      </aside>
     );
   }
 
@@ -32,7 +32,7 @@ export function MemberList({ guildId }: Props) {
   const offline: Member[] = [];
 
   return (
-    <div className="member-list">
+    <aside className="member-list" aria-label="Mitglieder">
       {online.length > 0 && (
         <>
           <div className="member-list-header">Online — {online.length}</div>
@@ -49,7 +49,7 @@ export function MemberList({ guildId }: Props) {
           ))}
         </>
       )}
-    </div>
+    </aside>
   );
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,18 +18,32 @@ import (
 
 const heartbeatInterval = 41250 // milliseconds (same as Discord)
 
+var allowedOrigins = map[string]bool{
+	"http://localhost:5173": true,
+	"http://localhost:3000": true,
+}
+
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
 		origin := r.Header.Get("Origin")
 		if origin == "" {
-			return true // Allow non-browser clients (bots)
+			return true // Allow non-browser clients (bots, curl)
 		}
-		// Allow localhost in development, restrict in production
-		// TODO: Make this configurable via env var ALLOWED_ORIGINS
-		return true
+		return allowedOrigins[origin]
 	},
+}
+
+// SetAllowedOrigins configures the WebSocket origin whitelist from a comma-separated string.
+func SetAllowedOrigins(origins string) {
+	allowedOrigins = make(map[string]bool)
+	for _, o := range strings.Split(origins, ",") {
+		o = strings.TrimSpace(o)
+		if o != "" {
+			allowedOrigins[o] = true
+		}
+	}
 }
 
 // Server manages all WebSocket sessions.

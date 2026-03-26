@@ -55,7 +55,7 @@ export function SearchPanel({ guildId, onClose }: Props) {
       <div className="search-panel-header">
         <input
           className="search-input"
-          placeholder="Search messages..."
+          placeholder="Nachrichten durchsuchen..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -66,16 +66,16 @@ export function SearchPanel({ guildId, onClose }: Props) {
 
       <div className="search-results">
         {loading && (
-          <div className="search-status">Searching...</div>
+          <div className="search-status">Suche läuft...</div>
         )}
 
         {!loading && searched && results.length === 0 && (
-          <div className="search-status">No results found</div>
+          <div className="search-status">Keine Ergebnisse gefunden</div>
         )}
 
         {!loading && results.length > 0 && (
           <>
-            <div className="search-status">{totalHits} result{totalHits !== 1 ? 's' : ''}</div>
+            <div className="search-status">{totalHits} Ergebnis{totalHits !== 1 ? 'se' : ''}</div>
             {results.map((r) => (
               <div key={r.id} className="search-result-item">
                 <div className="search-result-meta">

@@ -227,3 +227,51 @@ func (r *Repository) GetChannelGuildID(ctx context.Context, channelID int64) int
 	}
 	return 0
 }
+
+// --- Attachments ---
+
+// SavePendingAttachment inserts an attachment record with NULL message_id (not yet linked).
+func (r *Repository) SavePendingAttachment(ctx context.Context, att Attachment) error {
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO attachments (id, message_id, filename, content_type, size, url, width, height)
+		VALUES ($1, NULL, $2, $3, $4, $5, $6, $7)
+	`, att.ID, att.Filename, att.ContentType, att.Size, att.URL, att.Width, att.Height)
+	return err
+}
+
+// LinkPendingAttachment sets the message_id on a pending attachment.
+func (r *Repository) LinkPendingAttachment(ctx context.Context, attachmentID, messageID int64) error {
+	_, err := r.db.Exec(ctx, `
+		UPDATE attachments SET message_id = $1 WHERE id = $2 AND message_id IS NULL
+	`, messageID, attachmentID)
+	return err
+}
+
+// GetAttachments fetches all attachments for a list of message IDs.
+func (r *Repository) GetAttachments(ctx context.Context, messageIDs []int64) (map[int64][]Attachment, error) {
+	if len(messageIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT message_id, id, filename, content_type, size, url, width, height
+		FROM attachments
+		WHERE message_id = ANY($1)
+		ORDER BY id
+	`, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int64][]Attachment)
+	for rows.Next() {
+		var msgID int64
+		var att Attachment
+		if err := rows.Scan(&msgID, &att.ID, &att.Filename, &att.ContentType, &att.Size, &att.URL, &att.Width, &att.Height); err != nil {
+			return nil, err
+		}
+		result[msgID] = append(result[msgID], att)
+	}
+	return result, nil
+}

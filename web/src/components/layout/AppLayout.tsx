@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '../../stores/auth';
 import { useAppStore } from '../../stores/app';
 import { GuildSidebar } from '../guild/GuildSidebar';
@@ -13,6 +13,7 @@ export function AppLayout() {
   const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild } = useAppStore();
   const [showCreateGuild, setShowCreateGuild] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
+  const [showChannels, setShowChannels] = useState(false);
 
   useEffect(() => {
     loadGuilds();
@@ -21,14 +22,14 @@ export function AppLayout() {
   const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${showChannels ? 'show-channels' : ''}`} role="application">
       {/* Guild sidebar (leftmost) */}
       <GuildSidebar
         guilds={guilds}
         selectedGuildId={selectedGuildId}
-        onSelectGuild={(id) => { setShowFriends(false); selectGuild(id); }}
+        onSelectGuild={(id) => { setShowFriends(false); setShowChannels(true); selectGuild(id); }}
         onCreateGuild={() => setShowCreateGuild(true)}
-        onShowFriends={() => setShowFriends(true)}
+        onShowFriends={() => { setShowFriends(true); setShowChannels(false); }}
         showFriends={showFriends}
       />
 
@@ -42,6 +43,7 @@ export function AppLayout() {
             <ChannelSidebar
               guild={selectedGuild}
               user={user!}
+              onChannelSelected={() => setShowChannels(false)}
             />
           )}
 
@@ -57,8 +59,9 @@ export function AppLayout() {
           ) : (
             <div className="chat-area">
               <div className="empty-state">
+                <div style={{ fontSize: 48, marginBottom: 8 }}>⚔️</div>
                 <h2>Willkommen bei Valhalla</h2>
-                <p>{guilds.length === 0 ? 'Erstelle einen Server' : 'Waehle einen Kanal'}</p>
+                <p>{guilds.length === 0 ? 'Erstelle einen Server, um loszulegen' : 'Wähle einen Kanal aus der Seitenleiste'}</p>
               </div>
             </div>
           )}
@@ -78,6 +81,13 @@ function CreateGuildModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const { createGuild } = useAppStore();
 
+  // Close on Escape
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
@@ -96,10 +106,10 @@ function CreateGuildModal({ onClose }: { onClose: () => void }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }} onClick={onClose}>
       <form className="auth-form" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
-        <h1>Create a Server</h1>
-        <p>Give your new server a name</p>
+        <h1>Server erstellen</h1>
+        <p>Gib deinem neuen Server einen Namen</p>
         <div className="form-group">
-          <label>Server Name</label>
+          <label>Servername</label>
           <input
             type="text"
             value={name}
@@ -111,7 +121,7 @@ function CreateGuildModal({ onClose }: { onClose: () => void }) {
           />
         </div>
         <button type="submit" className="btn" disabled={loading}>
-          {loading ? 'Creating...' : 'Create'}
+          {loading ? 'Erstellen...' : 'Erstellen'}
         </button>
       </form>
     </div>

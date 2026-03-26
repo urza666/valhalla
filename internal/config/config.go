@@ -45,6 +45,9 @@ type Config struct {
 	LiveKitAPIKey    string `envconfig:"LIVEKIT_API_KEY" default:"devkey"`
 	LiveKitAPISecret string `envconfig:"LIVEKIT_API_SECRET" default:"devsecret"`
 
+	// CORS / WebSocket
+	AllowedOrigins string `envconfig:"ALLOWED_ORIGINS" default:"http://localhost:5173,http://localhost:3000"`
+
 	// Logging
 	LogLevel  string `envconfig:"LOG_LEVEL" default:"debug"`
 	LogFormat string `envconfig:"LOG_FORMAT" default:"console"`

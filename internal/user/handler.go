@@ -94,6 +94,35 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// DeleteAccount handles POST /api/v1/users/@me/delete
+func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
+	u := auth.UserFromContext(r.Context())
+
+	var req struct {
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.NewBadRequest("Invalid request body").Write(w)
+		return
+	}
+
+	if req.Password == "" {
+		apierror.NewBadRequest("Password required to delete account").Write(w)
+		return
+	}
+
+	if err := h.service.DeleteAccount(r.Context(), u.ID, req.Password); err != nil {
+		if errors.Is(err, ErrWrongPassword) {
+			apierror.NewBadRequest("Incorrect password").Write(w)
+			return
+		}
+		apierror.NewBadRequest(err.Error()).Write(w)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // GetRelationships handles GET /api/v1/users/@me/relationships
 func (h *Handler) GetRelationships(w http.ResponseWriter, r *http.Request) {
 	u := auth.UserFromContext(r.Context())

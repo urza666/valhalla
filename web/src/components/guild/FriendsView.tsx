@@ -1,30 +1,16 @@
 import { useEffect, useState } from 'react';
-
-interface Relationship {
-  id: string;
-  user_id: string;
-  type: number; // 1=friend, 2=blocked, 3=pending_incoming, 4=pending_outgoing
-  username: string;
-  display_name: string | null;
-  avatar: string | null;
-}
-
-const headers = () => ({
-  Authorization: `Bearer ${localStorage.getItem('token')}`,
-  'Content-Type': 'application/json',
-});
+import { api } from '../../api/client';
+import type { Relationship } from '../../api/client';
 
 export function FriendsView() {
   const [rels, setRels] = useState<Relationship[]>([]);
   const [tab, setTab] = useState<'all' | 'online' | 'pending' | 'blocked' | 'add'>('all');
   const [addUsername, setAddUsername] = useState('');
   const [addMsg, setAddMsg] = useState('');
+  const [addSuccess, setAddSuccess] = useState(false);
 
   useEffect(() => {
-    fetch('/api/v1/users/@me/relationships', { headers: headers() })
-      .then((r) => r.json())
-      .then(setRels)
-      .catch(() => {});
+    api.getRelationships().then(setRels).catch(() => {});
   }, []);
 
   const friends = rels.filter((r) => r.type === 1);
@@ -34,34 +20,38 @@ export function FriendsView() {
   const sendRequest = async () => {
     if (!addUsername.trim()) return;
     setAddMsg('');
+    setAddSuccess(false);
     try {
-      const res = await fetch('/api/v1/users/@me/relationships', {
-        method: 'POST', headers: headers(),
-        body: JSON.stringify({ username: addUsername.trim() }),
-      });
-      if (res.ok) {
-        setAddMsg('Freundschaftsanfrage gesendet!');
-        setAddUsername('');
-      } else {
-        const data = await res.json();
-        setAddMsg(data.message || 'Fehler');
-      }
-    } catch { setAddMsg('Fehler'); }
+      await api.sendFriendRequest(addUsername.trim());
+      setAddMsg('Freundschaftsanfrage gesendet!');
+      setAddSuccess(true);
+      setAddUsername('');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Fehler beim Senden der Anfrage';
+      setAddMsg(message);
+      setAddSuccess(false);
+    }
   };
 
   const accept = async (targetId: string) => {
-    await fetch(`/api/v1/users/@me/relationships/${targetId}`, { method: 'PUT', headers: headers() });
-    setRels(rels.map((r) => r.id === targetId ? { ...r, type: 1 } : r));
+    try {
+      await api.acceptFriendRequest(targetId);
+      setRels(rels.map((r) => r.id === targetId ? { ...r, type: 1 } : r));
+    } catch { /* ignore */ }
   };
 
   const remove = async (targetId: string) => {
-    await fetch(`/api/v1/users/@me/relationships/${targetId}`, { method: 'DELETE', headers: headers() });
-    setRels(rels.filter((r) => r.id !== targetId));
+    try {
+      await api.removeRelationship(targetId);
+      setRels(rels.filter((r) => r.id !== targetId));
+    } catch { /* ignore */ }
   };
 
   const unblock = async (targetId: string) => {
-    await fetch(`/api/v1/users/@me/blocks/${targetId}`, { method: 'DELETE', headers: headers() });
-    setRels(rels.filter((r) => r.id !== targetId));
+    try {
+      await api.unblockUser(targetId);
+      setRels(rels.filter((r) => r.id !== targetId));
+    } catch { /* ignore */ }
   };
 
   return (
@@ -76,7 +66,7 @@ export function FriendsView() {
               className={`friends-tab ${tab === t ? 'active' : ''} ${t === 'add' ? 'green' : ''}`}
               onClick={() => setTab(t)}
             >
-              {t === 'all' ? 'Alle' : t === 'online' ? 'Online' : t === 'pending' ? `Ausstehend${pending.length ? ` (${pending.length})` : ''}` : t === 'blocked' ? 'Blockiert' : 'Hinzufuegen'}
+              {t === 'all' ? 'Alle' : t === 'online' ? 'Online' : t === 'pending' ? `Ausstehend${pending.length ? ` (${pending.length})` : ''}` : t === 'blocked' ? 'Blockiert' : 'Hinzufügen'}
             </button>
           ))}
         </div>
@@ -86,11 +76,11 @@ export function FriendsView() {
         {/* Add friend */}
         {tab === 'add' && (
           <div className="friends-add">
-            <h3>Freund hinzufuegen</h3>
+            <h3>Freund hinzufügen</h3>
             <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 12 }}>
               Gib den Benutzernamen der Person ein.
             </p>
-            {addMsg && <div style={{ color: addMsg.includes('!') ? 'var(--success)' : 'var(--danger)', fontSize: 14, marginBottom: 8 }}>{addMsg}</div>}
+            {addMsg && <div style={{ color: addSuccess ? 'var(--success)' : 'var(--danger)', fontSize: 14, marginBottom: 8 }}>{addMsg}</div>}
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 value={addUsername}
@@ -111,7 +101,7 @@ export function FriendsView() {
           <>
             <div className="friends-section-title">Freunde — {friends.length}</div>
             {friends.length === 0 ? (
-              <div className="friends-empty">Noch keine Freunde. Fuege jemanden hinzu!</div>
+              <div className="friends-empty">Noch keine Freunde. Füge jemanden hinzu!</div>
             ) : (
               friends.map((f) => (
                 <div key={f.id} className="friend-item">
@@ -121,8 +111,8 @@ export function FriendsView() {
                     <div className="friend-status">Online</div>
                   </div>
                   <div className="friend-actions">
-                    <button className="btn-small" title="Nachricht">💬</button>
-                    <button className="btn-small danger" onClick={() => remove(f.id)} title="Entfernen">✕</button>
+                    <button className="btn-small" title="Nachricht" aria-label="Nachricht senden">💬</button>
+                    <button className="btn-small danger" onClick={() => remove(f.id)} title="Entfernen" aria-label="Freund entfernen">✕</button>
                   </div>
                 </div>
               ))
@@ -145,8 +135,8 @@ export function FriendsView() {
                     <div className="friend-status">{p.type === 3 ? 'Eingehende Anfrage' : 'Ausgehende Anfrage'}</div>
                   </div>
                   <div className="friend-actions">
-                    {p.type === 3 && <button className="btn-small" style={{ color: 'var(--success)' }} onClick={() => accept(p.id)}>✓</button>}
-                    <button className="btn-small danger" onClick={() => remove(p.id)}>✕</button>
+                    {p.type === 3 && <button className="btn-small" style={{ color: 'var(--success)' }} onClick={() => accept(p.id)} aria-label="Anfrage annehmen">✓</button>}
+                    <button className="btn-small danger" onClick={() => remove(p.id)} aria-label="Anfrage ablehnen">✕</button>
                   </div>
                 </div>
               ))

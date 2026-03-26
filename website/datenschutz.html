@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datenschutzerklärung — Valhalla</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 720px; margin: 0 auto; padding: 40px 20px; color: #f2f3f5; background: #1e1f22; line-height: 1.6; }
+    h1 { font-size: 28px; margin-bottom: 24px; }
+    h2 { font-size: 20px; margin-top: 32px; margin-bottom: 12px; }
+    h3 { font-size: 16px; margin-top: 20px; }
+    p, li { font-size: 15px; color: #b5bac1; }
+    a { color: #00a8fc; }
+    .back { display: inline-block; margin-bottom: 24px; color: #00a8fc; text-decoration: none; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <a href="/" class="back">&larr; Zurück zur Startseite</a>
+  <h1>Datenschutzerklärung</h1>
+  <p><em>Stand: März 2026</em></p>
+
+  <h2>1. Verantwortlicher</h2>
+  <p>Verantwortlich für die Datenverarbeitung ist der im <a href="/impressum.html">Impressum</a> genannte Betreiber.</p>
+
+  <h2>2. Welche Daten wir erheben</h2>
+  <ul>
+    <li><strong>Registrierungsdaten:</strong> Benutzername, E-Mail-Adresse, Passwort (gehashed mit Argon2id)</li>
+    <li><strong>Profildaten:</strong> Anzeigename, Biografie (freiwillig)</li>
+    <li><strong>Nachrichten:</strong> Textnachrichten, Dateien, Reaktionen in Channels</li>
+    <li><strong>Nutzungsdaten:</strong> IP-Adresse bei Login, Session-Daten, Zeitstempel</li>
+    <li><strong>Voice/Video:</strong> Bei Nutzung werden Streams über LiveKit geleitet (keine Aufzeichnung)</li>
+  </ul>
+
+  <h2>3. Rechtsgrundlage</h2>
+  <p>Die Verarbeitung erfolgt auf Basis von Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung) für die Kernfunktionalität und Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse) für Sicherheits- und Betriebszwecke.</p>
+
+  <h2>4. Speicherdauer</h2>
+  <ul>
+    <li>Kontodaten: Bis zur Löschung des Accounts</li>
+    <li>Nachrichten: Gemäß Server-Retention-Policy oder bis zur manuellen Löschung</li>
+    <li>Sessions: 7 Tage nach letzter Nutzung</li>
+    <li>Audit-Logs: Gemäß der konfigurierten Aufbewahrungsfrist</li>
+  </ul>
+
+  <h2>5. Deine Rechte (DSGVO Art. 15-22)</h2>
+  <ul>
+    <li><strong>Auskunft</strong> (Art. 15): Du kannst erfahren, welche Daten über dich gespeichert sind.</li>
+    <li><strong>Berichtigung</strong> (Art. 16): Du kannst dein Profil jederzeit bearbeiten.</li>
+    <li><strong>Löschung</strong> (Art. 17): Du kannst dein Konto jederzeit in den Einstellungen löschen. Alle personenbezogenen Daten werden entfernt. Nachrichten werden anonymisiert.</li>
+    <li><strong>Datenübertragbarkeit</strong> (Art. 20): Datenexport wird bereitgestellt.</li>
+    <li><strong>Widerspruch</strong> (Art. 21): Du kannst der Verarbeitung jederzeit widersprechen.</li>
+  </ul>
+
+  <h2>6. Datensicherheit</h2>
+  <ul>
+    <li>Passwörter werden mit Argon2id gehasht (nicht im Klartext gespeichert)</li>
+    <li>Transportverschlüsselung über TLS/HTTPS</li>
+    <li>Session-Tokens sind kryptographisch sicher generiert (32 Byte Zufall)</li>
+    <li>Berechtigungssystem mit 49+ Permission-Bits und Rollen-Hierarchie</li>
+  </ul>
+
+  <h2>7. Self-Hosting</h2>
+  <p>Bei Self-Hosting-Installationen ist der jeweilige Betreiber für die Einhaltung der DSGVO verantwortlich. Diese Datenschutzerklärung gilt als Vorlage und muss vom Betreiber angepasst werden.</p>
+
+  <h2>8. Drittanbieter</h2>
+  <ul>
+    <li><strong>LiveKit:</strong> Für Voice/Video (kann self-hosted werden)</li>
+    <li><strong>Meilisearch:</strong> Für die Volltextsuche (self-hosted)</li>
+    <li><strong>Tenor GIF API:</strong> Wenn GIF-Suche genutzt wird, werden Suchanfragen an Google/Tenor übermittelt</li>
+  </ul>
+
+  <h2>9. Cookies</h2>
+  <p>Valhalla verwendet keine Tracking-Cookies. Session-Tokens werden in localStorage gespeichert (technisch notwendig, kein Tracking).</p>
+
+  <h2>10. Kontakt</h2>
+  <p>Bei Datenschutzfragen wende dich an die im <a href="/impressum.html">Impressum</a> genannte Kontaktadresse.</p>
+</body>
+</html>

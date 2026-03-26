@@ -16,13 +16,17 @@ export function GuildSidebar({ guilds, selectedGuildId, onSelectGuild, onCreateG
   const [showJoin, setShowJoin] = useState(false);
 
   return (
-    <div className="guild-sidebar">
+    <nav className="guild-sidebar" aria-label="Server-Liste">
       {/* DM / Friends button */}
       <div
         className={`guild-icon ${showFriends ? 'active' : ''}`}
         title="Freunde & DMs"
+        aria-label="Freunde und Direktnachrichten"
+        role="button"
+        tabIndex={0}
         style={{ marginBottom: 8, fontSize: 22 }}
         onClick={onShowFriends}
+        onKeyDown={(e) => e.key === 'Enter' && onShowFriends()}
       >
         💬
       </div>
@@ -34,7 +38,11 @@ export function GuildSidebar({ guilds, selectedGuildId, onSelectGuild, onCreateG
           key={guild.id}
           className={`guild-icon ${guild.id === selectedGuildId ? 'active' : ''}`}
           onClick={() => onSelectGuild(guild.id)}
+          onKeyDown={(e) => e.key === 'Enter' && onSelectGuild(guild.id)}
           title={guild.name}
+          aria-label={`Server: ${guild.name}`}
+          role="button"
+          tabIndex={0}
         >
           {guild.icon ? (
             <img src={`/api/v1/assets/icons/${guild.id}/${guild.icon}`} alt="" width={48} height={48} />
@@ -45,15 +53,15 @@ export function GuildSidebar({ guilds, selectedGuildId, onSelectGuild, onCreateG
       ))}
 
       {/* Add / Join buttons */}
-      <div className="guild-icon add" onClick={onCreateGuild} title="Server erstellen">
+      <div className="guild-icon add" onClick={onCreateGuild} title="Server erstellen" aria-label="Server erstellen" role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && onCreateGuild()}>
         +
       </div>
-      <div className="guild-icon add" onClick={() => setShowJoin(true)} title="Server beitreten" style={{ color: 'var(--status-online)', fontSize: 20 }}>
+      <div className="guild-icon add" onClick={() => setShowJoin(true)} title="Server beitreten" aria-label="Server beitreten" role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && setShowJoin(true)} style={{ color: 'var(--status-online)', fontSize: 20 }}>
         ↓
       </div>
 
       {showJoin && <JoinServerDialog onClose={() => setShowJoin(false)} />}
-    </div>
+    </nav>
   );
 }
 
@@ -72,7 +80,7 @@ function JoinServerDialog({ onClose }: { onClose: () => void }) {
       await loadGuilds();
       onClose();
     } catch {
-      setError('Ungueltige oder abgelaufene Einladung');
+      setError('Ungültige oder abgelaufene Einladung');
     }
     setLoading(false);
   };

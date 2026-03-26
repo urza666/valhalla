@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"errors"
 	"strings"
@@ -10,6 +11,7 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/valhalla-chat/valhalla/pkg/snowflake"
 )
 
@@ -39,6 +41,7 @@ type Repository interface {
 // Service handles authentication business logic.
 type Service struct {
 	repo      Repository
+	db        *pgxpool.Pool
 	idGen     *snowflake.Generator
 	tokenTTL  time.Duration
 }
@@ -52,6 +55,11 @@ func NewService(repo Repository, idGen *snowflake.Generator, tokenTTL time.Durat
 	}
 }
 
+// SetDB sets the database pool for password reset queries.
+func (s *Service) SetDB(db *pgxpool.Pool) {
+	s.db = db
+}
+
 // Register creates a new user account.
 func (s *Service) Register(ctx context.Context, req RegisterRequest) (*TokenResponse, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
@@ -63,7 +71,7 @@ func (s *Service) Register(ctx context.Context, req RegisterRequest) (*TokenResp
 	if err := validateUsername(req.Username); err != nil {
 		return nil, err
 	}
-	if len(req.Password) < 8 {
+	if len(req.Password) < 8 || len(req.Password) > 128 {
 		return nil, ErrWeakPassword
 	}
 
@@ -198,15 +206,69 @@ func verifyPassword(password, encoded string) bool {
 
 	hash := argon2.IDKey([]byte(password), salt, 2, 64*1024, 4, 32)
 
-	if len(hash) != len(expectedHash) {
-		return false
+	// Constant-time comparison to prevent timing side-channel attacks
+	return subtle.ConstantTimeCompare(hash, expectedHash) == 1
+}
+
+// CreatePasswordReset generates a reset token for the given email.
+func (s *Service) CreatePasswordReset(ctx context.Context, email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Look up user by email
+	user, _, err := s.repo.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil // Silent — don't leak whether email exists
 	}
-	for i := range hash {
-		if hash[i] != expectedHash[i] {
-			return false
-		}
+
+	// Generate reset token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return err
 	}
-	return true
+	token := hex.EncodeToString(tokenBytes)
+
+	// Save to DB (expires in 1 hour)
+	_, err = s.db.Exec(ctx, `
+		INSERT INTO password_resets (token, user_id, expires_at)
+		VALUES ($1, $2, NOW() + INTERVAL '1 hour')
+	`, token, user.ID)
+	if err != nil {
+		return err
+	}
+
+	// In production, send email. For now, log the token.
+	// log.Info().Str("reset_token", token).Int64("user_id", user.ID).Msg("Password reset requested")
+	// The token can be used at POST /api/v1/auth/reset-password
+	return nil
+}
+
+// ResetPassword validates a reset token and sets a new password.
+func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) error {
+	var userID int64
+	err := s.db.QueryRow(ctx, `
+		SELECT user_id FROM password_resets
+		WHERE token = $1 AND expires_at > NOW() AND used = false
+	`, token).Scan(&userID)
+	if err != nil {
+		return errors.New("invalid or expired token")
+	}
+
+	// Hash new password
+	hash, err := hashPassword(newPassword)
+	if err != nil {
+		return err
+	}
+
+	// Update password
+	s.db.Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1`, userID, hash)
+
+	// Mark token as used
+	s.db.Exec(ctx, `UPDATE password_resets SET used = true WHERE token = $1`, token)
+
+	// Invalidate all sessions
+	s.db.Exec(ctx, `DELETE FROM sessions WHERE user_id = $1`, userID)
+
+	return nil
 }
 
 func validateEmail(email string) error {

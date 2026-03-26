@@ -22,7 +22,7 @@ export function AuthPage() {
         await register(username, email, password);
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : 'Etwas ist schiefgelaufen');
     } finally {
       setLoading(false);
     }
@@ -31,14 +31,14 @@ export function AuthPage() {
   return (
     <div className="auth-container">
       <form className="auth-form" onSubmit={handleSubmit}>
-        <h1>{isLogin ? 'Welcome back!' : 'Create an account'}</h1>
-        <p>{isLogin ? 'Sign in to continue to Valhalla' : 'Join the conversation'}</p>
+        <h1>{isLogin ? 'Willkommen zurück!' : 'Konto erstellen'}</h1>
+        <p>{isLogin ? 'Melde dich an, um Valhalla zu nutzen' : 'Tritt der Unterhaltung bei'}</p>
 
         {error && <div className="error-text">{error}</div>}
 
         {!isLogin && (
           <div className="form-group">
-            <label>Username</label>
+            <label>Benutzername</label>
             <input
               type="text"
               value={username}
@@ -51,7 +51,7 @@ export function AuthPage() {
         )}
 
         <div className="form-group">
-          <label>Email</label>
+          <label>E-Mail</label>
           <input
             type="email"
             value={email}
@@ -61,7 +61,7 @@ export function AuthPage() {
         </div>
 
         <div className="form-group">
-          <label>Password</label>
+          <label>Passwort</label>
           <input
             type="password"
             value={password}
@@ -72,14 +72,28 @@ export function AuthPage() {
         </div>
 
         <button type="submit" className="btn" disabled={loading}>
-          {loading ? 'Loading...' : isLogin ? 'Log In' : 'Register'}
+          {loading ? 'Laden...' : isLogin ? 'Anmelden' : 'Registrieren'}
         </button>
+
+        {isLogin && (
+          <div style={{ textAlign: 'center', marginTop: 8 }}>
+            <a style={{ color: 'var(--text-link)', cursor: 'pointer', fontSize: 13 }} onClick={() => {
+              const email = prompt('E-Mail-Adresse für Passwort-Reset:');
+              if (email) {
+                fetch('/api/v1/auth/forgot-password', {
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email }),
+                }).then(() => alert('Falls ein Konto mit dieser E-Mail existiert, wurde ein Reset-Link erstellt.')).catch(() => {});
+              }
+            }}>Passwort vergessen?</a>
+          </div>
+        )}
 
         <div className="auth-switch">
           {isLogin ? (
-            <>Need an account? <a onClick={() => setIsLogin(false)}>Register</a></>
+            <>Noch kein Konto? <a onClick={() => setIsLogin(false)}>Registrieren</a></>
           ) : (
-            <>Already have an account? <a onClick={() => setIsLogin(true)}>Log In</a></>
+            <>Bereits registriert? <a onClick={() => setIsLogin(true)}>Anmelden</a></>
           )}
         </div>
       </form>

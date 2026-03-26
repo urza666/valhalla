@@ -7,6 +7,8 @@ import { Composer } from './Composer';
 import { MessageActions } from './MessageActions';
 import { KanbanBoard } from '../kanban/KanbanBoard';
 import { WikiView } from '../wiki/WikiView';
+import { SearchPanel } from './SearchPanel';
+import { toast } from '../../stores/toast';
 import type { Message } from '../../api/client';
 
 interface Props {
@@ -20,6 +22,7 @@ export function ChatView({ channelId }: Props) {
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [viewMode, setViewMode] = useState<'chat' | 'board' | 'wiki'>('chat');
+  const [showSearch, setShowSearch] = useState(false);
 
   const guildChannels = channels.get(selectedGuildId || '') || [];
   const channel = guildChannels.find((c) => c.id === channelId);
@@ -36,7 +39,20 @@ export function ChatView({ channelId }: Props) {
   useEffect(() => {
     setReplyTo(null);
     setEditingMsg(null);
+    setShowSearch(false);
   }, [channelId]);
+
+  // Ctrl+K to toggle search
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   const lastTypingSent = useRef(0);
   const sendTyping = useCallback(() => {
@@ -48,8 +64,15 @@ export function ChatView({ channelId }: Props) {
   }, [channelId]);
 
   return (
-    <div className="chat-area">
-      <div className="chat-header">
+    <main className="chat-area">
+      <header className="chat-header">
+        <button
+          className="mobile-menu-btn"
+          onClick={() => document.querySelector('.app-layout')?.classList.toggle('show-channels')}
+          aria-label="Kanäle anzeigen"
+        >
+          ☰
+        </button>
         <span className="hash">#</span>
         {channel?.name || 'unknown'}
         {channel?.topic && (
@@ -61,8 +84,16 @@ export function ChatView({ channelId }: Props) {
           <button className={`friends-tab ${viewMode === 'chat' ? 'active' : ''}`} onClick={() => setViewMode('chat')}>Chat</button>
           <button className={`friends-tab ${viewMode === 'board' ? 'active' : ''}`} onClick={() => setViewMode('board')}>📋 Board</button>
           <button className={`friends-tab ${viewMode === 'wiki' ? 'active' : ''}`} onClick={() => setViewMode('wiki')}>📖 Wiki</button>
+          <button
+            className={`friends-tab ${showSearch ? 'active' : ''}`}
+            onClick={() => setShowSearch(!showSearch)}
+            title="Suche (Strg+K)"
+            aria-label="Nachrichten durchsuchen"
+          >
+            🔍
+          </button>
         </div>
-      </div>
+      </header>
 
       {/* Board view */}
       {viewMode === 'board' && selectedGuildId && (
@@ -80,7 +111,7 @@ export function ChatView({ channelId }: Props) {
         {channelMessages.length === 0 ? (
           <div className="empty-state">
             <h2>Willkommen in #{channel?.name}</h2>
-            <p>Das ist der Anfang des Kanals. Schreibe die erste Nachricht!</p>
+            <p>Das ist der Anfang von #{channel?.name}. Schreibe die erste Nachricht!</p>
           </div>
         ) : (
           channelMessages.map((msg, i) => (
@@ -122,7 +153,12 @@ export function ChatView({ channelId }: Props) {
         onReplySent={() => setReplyTo(null)}
       />
       </>}
-    </div>
+
+      {/* Search panel */}
+      {showSearch && selectedGuildId && (
+        <SearchPanel guildId={selectedGuildId} onClose={() => setShowSearch(false)} />
+      )}
+    </main>
   );
 }
 
@@ -140,7 +176,9 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
     try {
       await api.editMessage(channelId, message.id, editText.trim());
       onEditDone();
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('Nachricht konnte nicht bearbeitet werden');
+    }
   };
 
   const time = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -164,6 +202,46 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
     <div className="message-content"><Markdown content={message.content} /></div>
   );
 
+  // Attachments
+  const attachments = message.attachments && message.attachments.length > 0 ? (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
+      {message.attachments.map((att) => {
+        const isImage = att.content_type?.startsWith('image/');
+        if (isImage) {
+          return (
+            <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer">
+              <img
+                src={att.url}
+                alt={att.filename}
+                style={{ maxWidth: 400, maxHeight: 300, borderRadius: 4, display: 'block' }}
+              />
+            </a>
+          );
+        }
+        return (
+          <a
+            key={att.id}
+            href={att.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 12px', background: 'var(--bg-tertiary)', borderRadius: 4,
+              color: 'var(--text-link)', textDecoration: 'none', fontSize: 14,
+              maxWidth: 400,
+            }}
+          >
+            <span>📄</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.filename}</span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 12, flexShrink: 0 }}>
+              {att.size < 1024 ? `${att.size} B` : att.size < 1024 * 1024 ? `${(att.size / 1024).toFixed(1)} KB` : `${(att.size / 1024 / 1024).toFixed(1)} MB`}
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  ) : null;
+
   // Reactions
   const reactions = message.reactions && message.reactions.length > 0 ? (
     <div className="msg-reactions">
@@ -173,9 +251,9 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
           className={`msg-reaction ${r.me ? 'me' : ''}`}
           onClick={() => {
             if (r.me) {
-              api.removeReaction(channelId, message.id, r.emoji);
+              api.removeReaction(channelId, message.id, r.emoji).catch(() => toast.error('Reaktion konnte nicht entfernt werden'));
             } else {
-              api.addReaction(channelId, message.id, r.emoji);
+              api.addReaction(channelId, message.id, r.emoji).catch(() => toast.error('Reaktion konnte nicht hinzugefügt werden'));
             }
           }}
         >
@@ -190,6 +268,7 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
       <div className={`message ${isEditing ? 'editing' : ''}`} style={{ paddingLeft: 56 }}>
         <div className="message-body">
           {content}
+          {attachments}
           {reactions}
         </div>
       </div>
@@ -213,6 +292,7 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
           {message.edited_timestamp && <span className="message-edited">(bearbeitet)</span>}
         </div>
         {content}
+        {attachments}
         {reactions}
       </div>
     </div>

@@ -74,11 +74,11 @@ function ProfileTab() {
       </div>
 
       <div className="form-group">
-        <label>Ueber mich</label>
+        <label>Über mich</label>
         <textarea
           value={bio}
           onChange={(e) => setBio(e.target.value)}
-          placeholder="Erzaehl etwas ueber dich..."
+          placeholder="Erzähl etwas über dich..."
           maxLength={190}
           rows={3}
           style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 14, fontFamily: 'var(--font-primary)', resize: 'vertical' }}
@@ -87,7 +87,7 @@ function ProfileTab() {
       </div>
 
       <button className="btn" style={{ width: 'auto' }} onClick={save} disabled={saving}>
-        {saved ? 'Gespeichert!' : saving ? 'Speichern...' : 'Aenderungen speichern'}
+        {saved ? 'Gespeichert!' : saving ? 'Speichern...' : 'Änderungen speichern'}
       </button>
     </div>
   );
@@ -98,9 +98,11 @@ function AccountTab() {
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [pwMsg, setPwMsg] = useState('');
+  const [pwSuccess, setPwSuccess] = useState(false);
 
   const changePw = async () => {
     setPwMsg('');
+    setPwSuccess(false);
     try {
       const res = await fetch('/api/v1/users/@me/password', {
         method: 'POST',
@@ -108,15 +110,16 @@ function AccountTab() {
         body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
       });
       if (res.ok) {
-        setPwMsg('Passwort geaendert!');
+        setPwMsg('Passwort geändert!');
+        setPwSuccess(true);
         setCurrentPw('');
         setNewPw('');
       } else {
         const data = await res.json();
-        setPwMsg(data.message || 'Fehler');
+        setPwMsg(data.message || 'Falsches Passwort oder ungültige Eingabe');
       }
     } catch {
-      setPwMsg('Fehler beim Aendern');
+      setPwMsg('Verbindungsfehler — bitte erneut versuchen');
     }
   };
 
@@ -136,9 +139,9 @@ function AccountTab() {
 
       <div className="settings-tab-sep" style={{ margin: '24px 0' }} />
 
-      <h3 style={{ fontSize: 16, marginBottom: 16 }}>Passwort aendern</h3>
+      <h3 style={{ fontSize: 16, marginBottom: 16 }}>Passwort ändern</h3>
 
-      {pwMsg && <div style={{ color: pwMsg.includes('!') ? 'var(--success)' : 'var(--danger)', fontSize: 14, marginBottom: 12 }}>{pwMsg}</div>}
+      {pwMsg && <div style={{ color: pwSuccess ? 'var(--success)' : 'var(--danger)', fontSize: 14, marginBottom: 12 }}>{pwMsg}</div>}
 
       <div className="form-group">
         <label>Aktuelles Passwort</label>
@@ -151,7 +154,36 @@ function AccountTab() {
       </div>
 
       <button className="btn" style={{ width: 'auto' }} onClick={changePw} disabled={!currentPw || newPw.length < 8}>
-        Passwort aendern
+        Passwort ändern
+      </button>
+
+      <div className="settings-tab-sep" style={{ margin: '24px 0' }} />
+
+      <h3 style={{ fontSize: 16, marginBottom: 16, color: 'var(--danger)' }}>Konto löschen</h3>
+      <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 12 }}>
+        Dein Konto und alle zugehörigen Daten werden unwiderruflich gelöscht. Nachrichten bleiben anonym erhalten.
+      </p>
+      <button
+        className="btn"
+        style={{ width: 'auto', background: 'var(--danger)' }}
+        onClick={async () => {
+          const pw = prompt('Gib dein Passwort ein, um das Konto zu löschen:');
+          if (!pw) return;
+          if (!confirm('Bist du sicher? Diese Aktion kann nicht rückgängig gemacht werden.')) return;
+          try {
+            await fetch('/api/v1/users/@me/delete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+              body: JSON.stringify({ password: pw }),
+            });
+            localStorage.removeItem('token');
+            window.location.reload();
+          } catch {
+            alert('Fehler beim Löschen des Kontos');
+          }
+        }}
+      >
+        Konto unwiderruflich löschen
       </button>
     </div>
   );
@@ -181,18 +213,19 @@ function SessionsTab() {
     <div>
       <h2>Aktive Sitzungen</h2>
       <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
-        Hier siehst du alle Geraete auf denen du eingeloggt bist.
+        Hier siehst du alle Geräte, auf denen du eingeloggt bist.
       </p>
 
       <div className="settings-list">
         {sessions.map((s, i) => (
           <div key={i} className="settings-list-item">
             <div>
-              <div style={{ fontWeight: 600 }}>
-                {s.current ? '(Aktuelle Sitzung) ' : ''}{s.token}
+              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                {s.current && <span style={{ fontSize: 12, padding: '2px 6px', borderRadius: 3, background: 'var(--status-online)', color: '#fff' }}>Aktiv</span>}
+                Sitzung {i + 1}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                {s.ip_address || 'Unbekannt'} — {s.created_at?.split('T')[0]}
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                {s.ip_address || 'Unbekannte IP'} — {s.created_at ? new Date(s.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Unbekannt'}
               </div>
             </div>
           </div>
@@ -254,7 +287,7 @@ function AppearanceTab() {
       </div>
 
       <div className="form-group">
-        <label>Schriftgroesse: {fontSize}px</label>
+        <label>Schriftgröße: {fontSize}px</label>
         <input
           type="range" min={12} max={20} value={fontSize}
           onChange={(e) => {

@@ -164,6 +164,32 @@ func (s *Service) RevokeAllSessions(ctx context.Context, userID int64, exceptTok
 	return err
 }
 
+// DeleteAccount permanently deletes a user account and all associated data.
+// Guild ownership must be transferred or guild deleted before calling this.
+func (s *Service) DeleteAccount(ctx context.Context, userID int64, password string) error {
+	// Verify password
+	var currentHash string
+	err := s.db.QueryRow(ctx, `SELECT password_hash FROM users WHERE id = $1`, userID).Scan(&currentHash)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	if !verifyPassword(password, currentHash) {
+		return ErrWrongPassword
+	}
+
+	// Check if user owns any guilds (must transfer first)
+	var ownedGuilds int
+	s.db.QueryRow(ctx, `SELECT COUNT(*) FROM guilds WHERE owner_id = $1`, userID).Scan(&ownedGuilds)
+	if ownedGuilds > 0 {
+		return errors.New("transfer or delete all owned servers before deleting your account")
+	}
+
+	// Delete user — cascades to sessions, members, relationships, reactions, etc.
+	// Messages will have author_id set to NULL (ON DELETE SET NULL)
+	_, err = s.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
+	return err
+}
+
 func hashPassword(password string) (string, error) {
 	salt := make([]byte, 16)
 	if _, err := rand.Read(salt); err != nil {

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../../stores/auth';
+import { api } from '../../api/client';
 
 interface Props {
   channelId: string;
@@ -12,26 +13,33 @@ interface TypingUser {
 }
 
 export function TypingIndicator({ channelId }: Props) {
-  const { gateway } = useAuthStore();
+  const { gateway, user: currentUser } = useAuthStore();
   const [typingUsers, setTypingUsers] = useState<Map<string, TypingUser>>(new Map());
+  const usernameCache = useRef<Map<string, string>>(new Map());
 
   useEffect(() => {
     if (!gateway) return;
 
     const unsub = gateway.on('TYPING_START', (data: unknown) => {
-      const { channel_id, user_id } = data as {
+      const { channel_id, user_id, username } = data as {
         channel_id: string;
         user_id: string;
+        username?: string;
         timestamp: number;
       };
       if (channel_id !== channelId) return;
+      // Don't show own typing
+      if (user_id === currentUser?.id) return;
+
+      // Use username from event, cache, or fallback
+      const displayName = username || usernameCache.current.get(user_id) || `Nutzer ${user_id.slice(-4)}`;
+      if (username) usernameCache.current.set(user_id, username);
 
       setTypingUsers((prev) => {
         const next = new Map(prev);
-        // TODO: resolve username from user store
         next.set(user_id, {
           id: user_id,
-          username: `User ${user_id.slice(-4)}`,
+          username: displayName,
           expiresAt: Date.now() + 10000,
         });
         return next;
@@ -56,7 +64,7 @@ export function TypingIndicator({ channelId }: Props) {
       unsub();
       clearInterval(interval);
     };
-  }, [gateway, channelId]);
+  }, [gateway, channelId, currentUser?.id]);
 
   // Clear typing when channel changes
   useEffect(() => {
@@ -68,12 +76,12 @@ export function TypingIndicator({ channelId }: Props) {
 
   const text =
     users.length === 1
-      ? `${users[0].username} is typing...`
+      ? `${users[0].username} tippt...`
       : users.length === 2
-        ? `${users[0].username} and ${users[1].username} are typing...`
+        ? `${users[0].username} und ${users[1].username} tippen...`
         : users.length === 3
-          ? `${users[0].username}, ${users[1].username}, and ${users[2].username} are typing...`
-          : 'Several people are typing...';
+          ? `${users[0].username}, ${users[1].username} und ${users[2].username} tippen...`
+          : 'Mehrere Personen tippen...';
 
   return (
     <div style={{

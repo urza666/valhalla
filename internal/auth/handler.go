@@ -83,6 +83,50 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(user)
 }
 
+// ForgotPassword handles POST /api/v1/auth/forgot-password
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.NewBadRequest("Invalid request body").Write(w)
+		return
+	}
+
+	// Always return success to prevent email enumeration
+	_ = h.service.CreatePasswordReset(r.Context(), req.Email)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "If an account with that email exists, a password reset link has been generated.",
+	})
+}
+
+// ResetPassword handles POST /api/v1/auth/reset-password
+func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token       string `json:"token"`
+		NewPassword string `json:"new_password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.NewBadRequest("Invalid request body").Write(w)
+		return
+	}
+
+	if len(req.NewPassword) < 8 || len(req.NewPassword) > 128 {
+		apierror.NewValidationError("Password must be 8-128 characters").Write(w)
+		return
+	}
+
+	if err := h.service.ResetPassword(r.Context(), req.Token, req.NewPassword); err != nil {
+		apierror.NewBadRequest("Invalid or expired reset token").Write(w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Password has been reset successfully."})
+}
+
 func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, ErrInvalidCredentials):

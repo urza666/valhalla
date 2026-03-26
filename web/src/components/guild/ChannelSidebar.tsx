@@ -12,9 +12,10 @@ import type { Guild, User, Channel } from '../../api/client';
 interface Props {
   guild: Guild;
   user: User;
+  onChannelSelected?: () => void;
 }
 
-export function ChannelSidebar({ guild, user }: Props) {
+export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
   const { channels, selectedChannelId, selectChannel, loadGuilds } = useAppStore();
   const guildChannels = channels.get(guild.id) || [];
   const [showSettings, setShowSettings] = useState(false);
@@ -32,8 +33,8 @@ export function ChannelSidebar({ guild, user }: Props) {
     ...(isOwner ? [
       { separator: true },
       { label: 'Kanal bearbeiten', icon: '⚙️', onClick: () => setShowSettings(true) },
-      { label: 'Kanal loschen', icon: '🗑️', danger: true, onClick: async () => {
-        if (confirm(`Kanal "${ch.name}" wirklich loschen?`)) {
+      { label: 'Kanal löschen', icon: '🗑️', danger: true, onClick: async () => {
+        if (confirm(`Kanal "${ch.name}" wirklich löschen?`)) {
           await fetch(`/api/v1/channels/${ch.id}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -45,7 +46,7 @@ export function ChannelSidebar({ guild, user }: Props) {
   ];
 
   return (
-    <div className="channel-sidebar">
+    <aside className="channel-sidebar" aria-label="Kanäle">
       {/* Server header with dropdown */}
       <div
         className="channel-sidebar-header"
@@ -63,7 +64,7 @@ export function ChannelSidebar({ guild, user }: Props) {
             channel={ch}
             guildId={guild.id}
             active={ch.id === selectedChannelId}
-            onClick={() => selectChannel(ch.id)}
+            onClick={() => { selectChannel(ch.id); onChannelSelected?.(); }}
             onContextMenu={(e) => channelCtx.show(e, getChannelContextItems(ch))}
           />
         ))}
@@ -79,7 +80,7 @@ export function ChannelSidebar({ guild, user }: Props) {
                   channel={ch}
                   guildId={guild.id}
                   active={ch.id === selectedChannelId}
-                  onClick={() => selectChannel(ch.id)}
+                  onClick={() => { selectChannel(ch.id); onChannelSelected?.(); }}
                   onContextMenu={(e) => channelCtx.show(e, getChannelContextItems(ch))}
                 />
               ))}
@@ -100,6 +101,7 @@ export function ChannelSidebar({ guild, user }: Props) {
           onClick={() => setShowUserSettings(true)}
           style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}
           title="Einstellungen"
+          aria-label="Benutzer-Einstellungen öffnen"
         >
           ⚙
         </button>
@@ -117,7 +119,7 @@ export function ChannelSidebar({ guild, user }: Props) {
           onClose={() => setShowSettings(false)}
           onUpdate={() => { loadGuilds(); setShowSettings(false); }}
           onDelete={async () => {
-            if (confirm(`Server "${guild.name}" wirklich loschen? Das kann nicht ruckgangig gemacht werden!`)) {
+            if (confirm(`Server "${guild.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden!`)) {
               await fetch(`/api/v1/guilds/${guild.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -138,7 +140,7 @@ export function ChannelSidebar({ guild, user }: Props) {
       {showUserSettings && (
         <UserSettings onClose={() => setShowUserSettings(false)} />
       )}
-    </div>
+    </aside>
   );
 }
 

@@ -67,9 +67,11 @@ func main() {
 
 	authRepo := auth.NewPostgresRepository(dbPool)
 	authService := auth.NewService(authRepo, idGen, cfg.TokenTTL)
+	authService.SetDB(dbPool)
 	authHandler := auth.NewHandler(authService)
 
 	resumeURL := fmt.Sprintf("ws://%s:%d/ws", cfg.APIHost, cfg.GatewayPort)
+	gateway.SetAllowedOrigins(cfg.AllowedOrigins)
 	gwServer := gateway.NewServer(ctx, authService, idGen, resumeURL)
 	go gwServer.StartHeartbeatChecker()
 
@@ -119,6 +121,7 @@ func main() {
 	r.Use(chimw.RealIP)
 	r.Use(middleware.Logger)
 	r.Use(chimw.Recoverer)
+	r.Use(middleware.MaxBodySize(1 << 20)) // 1 MB max JSON body
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:*", "https://localhost:*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -145,6 +148,8 @@ func main() {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/register", authHandler.Register)
 			r.Post("/login", authHandler.Login)
+			r.Post("/forgot-password", authHandler.ForgotPassword)
+			r.Post("/reset-password", authHandler.ResetPassword)
 		})
 
 		// Invite preview (public)
@@ -161,6 +166,7 @@ func main() {
 			r.Get("/users/@me", authHandler.Me)
 			r.Patch("/users/@me", userHandler.UpdateProfile)
 			r.Post("/users/@me/password", userHandler.ChangePassword)
+			r.Post("/users/@me/delete", userHandler.DeleteAccount)
 			r.Get("/users/@me/sessions", userHandler.GetSessions)
 			r.Delete("/users/@me/sessions", userHandler.RevokeSession)
 			r.Get("/users/@me/relationships", userHandler.GetRelationships)
@@ -290,8 +296,14 @@ func main() {
 
 				// Invites
 				r.Post("/invites", guildHandler.CreateInvite)
+
+				// File uploads
+				r.Post("/attachments", messageHandler.UploadAttachment)
 			})
 		})
+
+		// Attachment serving (public, no auth for serving files)
+		r.Get("/attachments/{filename}", messageHandler.ServeAttachment)
 	})
 
 	// Server

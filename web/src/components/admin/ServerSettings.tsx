@@ -16,14 +16,14 @@ export function ServerSettings({ guild, onClose, onUpdate, onDelete }: Props) {
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
         <div className="settings-sidebar">
           <div className="settings-sidebar-title">{guild.name}</div>
-          <button className={`settings-tab ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>Ubersicht</button>
-          <button className={`settings-tab ${tab === 'channels' ? 'active' : ''}`} onClick={() => setTab('channels')}>Kanale</button>
+          <button className={`settings-tab ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>Übersicht</button>
+          <button className={`settings-tab ${tab === 'channels' ? 'active' : ''}`} onClick={() => setTab('channels')}>Kanäle</button>
           <button className={`settings-tab ${tab === 'members' ? 'active' : ''}`} onClick={() => setTab('members')}>Mitglieder</button>
           <button className={`settings-tab ${tab === 'roles' ? 'active' : ''}`} onClick={() => setTab('roles')}>Rollen</button>
           <button className={`settings-tab ${tab === 'bans' ? 'active' : ''}`} onClick={() => setTab('bans')}>Bans</button>
           <button className={`settings-tab ${tab === 'audit' ? 'active' : ''}`} onClick={() => setTab('audit')}>Audit Log</button>
           <div className="settings-tab-sep" />
-          <button className="settings-tab danger" onClick={onDelete}>Server loschen</button>
+          <button className="settings-tab danger" onClick={onDelete}>Server löschen</button>
         </div>
         <div className="settings-content">
           <button className="settings-close" onClick={onClose}>ESC</button>
@@ -61,7 +61,7 @@ function OverviewTab({ guild, onUpdate }: { guild: Guild; onUpdate: (g: Guild) =
 
   return (
     <div>
-      <h2>Server-Ubersicht</h2>
+      <h2>Serverübersicht</h2>
       <div className="form-group" style={{ marginTop: 20 }}>
         <label>Servername</label>
         <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -94,7 +94,7 @@ function ChannelsTab({ guildId }: { guildId: string }) {
 
   return (
     <div>
-      <h2>Kanale</h2>
+      <h2>Kanäle</h2>
       <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 16 }}>
         <input placeholder="Kanalname" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ flex: 1 }} />
         <select value={newType} onChange={(e) => setNewType(Number(e.target.value))} className="form-select">
@@ -111,7 +111,7 @@ function ChannelsTab({ guildId }: { guildId: string }) {
             <button className="btn-small danger" onClick={() => {
               fetch(`/api/v1/channels/${ch.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
               setChannels(channels.filter((c) => c.id !== ch.id));
-            }}>Loschen</button>
+            }}>Löschen</button>
           </div>
         ))}
       </div>
@@ -175,7 +175,7 @@ function RolesTab({ guildId }: { guildId: string }) {
   };
 
   const deleteRole = async (roleId: string) => {
-    if (!confirm('Rolle wirklich loschen?')) return;
+    if (!confirm('Rolle wirklich löschen?')) return;
     await fetch(`/api/v1/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE', headers });
     setRoles(roles.filter((r) => r.id !== roleId));
   };
@@ -192,15 +192,15 @@ function RolesTab({ guildId }: { guildId: string }) {
   const PERMS = [
     { name: 'Administrator', bit: 3 },
     { name: 'Server verwalten', bit: 5 },
-    { name: 'Kanale verwalten', bit: 4 },
+    { name: 'Kanäle verwalten', bit: 4 },
     { name: 'Rollen verwalten', bit: 28 },
     { name: 'Mitglieder kicken', bit: 1 },
     { name: 'Mitglieder bannen', bit: 2 },
     { name: 'Timeout setzen', bit: 40 },
     { name: 'Nachrichten verwalten', bit: 13 },
     { name: 'Nachrichten senden', bit: 11 },
-    { name: 'Dateien anhangen', bit: 15 },
-    { name: 'Erwahnen @everyone', bit: 17 },
+    { name: 'Dateien anhängen', bit: 15 },
+    { name: 'Erwähnen @everyone', bit: 17 },
     { name: 'Kanal sehen', bit: 10 },
     { name: 'Verbinden (Voice)', bit: 20 },
     { name: 'Sprechen', bit: 21 },
@@ -265,7 +265,7 @@ function RolesTab({ guildId }: { guildId: string }) {
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
               <button className="btn-small" onClick={() => setEditingRole({ ...r, permissions: r.permissions?.toString() || '0' })}>Bearbeiten</button>
-              {r.position > 0 && <button className="btn-small danger" onClick={() => deleteRole(r.id)}>Loschen</button>}
+              {r.position > 0 && <button className="btn-small danger" onClick={() => deleteRole(r.id)}>Löschen</button>}
             </div>
           </div>
         ))}
@@ -337,7 +337,7 @@ function AuditLogTab({ guildId }: { guildId: string }) {
     <div>
       <h2>Audit Log</h2>
       {entries.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', marginTop: 16 }}>Keine Eintraege vorhanden.</p>
+        <p style={{ color: 'var(--text-muted)', marginTop: 16 }}>Keine Einträge vorhanden.</p>
       ) : (
         <div className="settings-list" style={{ marginTop: 16 }}>
           {entries.map((e: any) => (
