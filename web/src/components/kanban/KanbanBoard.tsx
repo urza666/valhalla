@@ -39,57 +39,69 @@ export function KanbanBoard({ channelId, guildId }: Props) {
   }, [channelId]);
 
   const createBoard = async () => {
-    const res = await fetch(`/api/v1/channels/${channelId}/boards`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ name: 'Neues Board', guild_id: guildId }),
-    });
-    const board = await res.json();
-    setBoards([...boards, board]);
-    loadBoard(board.id);
+    try {
+      const res = await fetch(`/api/v1/channels/${channelId}/boards`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ name: 'Neues Board', guild_id: guildId }),
+      });
+      const board = await res.json();
+      setBoards([...boards, board]);
+      loadBoard(board.id);
+    } catch { /* toast would need import */ }
   };
 
   const loadBoard = async (boardId: string) => {
-    const res = await fetch(`/api/v1/boards/${boardId}`, { headers: headers() });
-    const board = await res.json();
-    setActiveBoard(board);
+    try {
+      const res = await fetch(`/api/v1/boards/${boardId}`, { headers: headers() });
+      const board = await res.json();
+      setActiveBoard(board);
+    } catch { /* silent */ }
   };
 
   const addTask = async (bucketId: string) => {
     const title = newTaskTitle[bucketId]?.trim();
     if (!title || !activeBoard) return;
-    const res = await fetch(`/api/v1/boards/${activeBoard.id}/tasks`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ bucket_id: bucketId, title }),
-    });
-    const task = await res.json();
-    setActiveBoard({
-      ...activeBoard,
-      buckets: activeBoard.buckets.map((b) =>
-        b.id === bucketId ? { ...b, tasks: [...(b.tasks || []), task] } : b
-      ),
-    });
-    setNewTaskTitle({ ...newTaskTitle, [bucketId]: '' });
+    try {
+      const res = await fetch(`/api/v1/boards/${activeBoard.id}/tasks`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ bucket_id: bucketId, title }),
+      });
+      const task = await res.json();
+      setActiveBoard({
+        ...activeBoard,
+        buckets: activeBoard.buckets.map((b) =>
+          b.id === bucketId ? { ...b, tasks: [...(b.tasks || []), task] } : b
+        ),
+      });
+      setNewTaskTitle({ ...newTaskTitle, [bucketId]: '' });
+    } catch { /* silent */ }
   };
 
   const moveTask = async (taskId: string, toBucketId: string) => {
-    await fetch(`/api/v1/tasks/${taskId}/move`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ bucket_id: toBucketId, position: 0 }),
-    });
-    if (activeBoard) loadBoard(activeBoard.id);
+    try {
+      await fetch(`/api/v1/tasks/${taskId}/move`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ bucket_id: toBucketId, position: 0 }),
+      });
+      if (activeBoard) loadBoard(activeBoard.id);
+    } catch { /* silent */ }
   };
 
   const toggleComplete = async (taskId: string, completed: boolean) => {
-    await fetch(`/api/v1/tasks/${taskId}`, {
-      method: 'PATCH', headers: headers(),
-      body: JSON.stringify({ completed }),
-    });
-    if (activeBoard) loadBoard(activeBoard.id);
+    try {
+      await fetch(`/api/v1/tasks/${taskId}`, {
+        method: 'PATCH', headers: headers(),
+        body: JSON.stringify({ completed }),
+      });
+      if (activeBoard) loadBoard(activeBoard.id);
+    } catch { /* silent */ }
   };
 
   const deleteTask = async (taskId: string) => {
-    await fetch(`/api/v1/tasks/${taskId}`, { method: 'DELETE', headers: headers() });
-    if (activeBoard) loadBoard(activeBoard.id);
+    try {
+      await fetch(`/api/v1/tasks/${taskId}`, { method: 'DELETE', headers: headers() });
+      if (activeBoard) loadBoard(activeBoard.id);
+    } catch { /* silent */ }
   };
 
   const priorityLabels = ['', '🔵 Niedrig', '🟡 Mittel', '🟠 Hoch', '🔴 Dringend'];

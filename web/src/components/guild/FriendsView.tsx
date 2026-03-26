@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
+import { toast } from '../../stores/toast';
 import type { Relationship } from '../../api/client';
 
 export function FriendsView() {
