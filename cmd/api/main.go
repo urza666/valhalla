@@ -184,6 +184,17 @@ func main() {
 
 				// Guild roles
 				r.Get("/roles", guildHandler.GetRoles)
+				r.Post("/roles", guildHandler.CreateRole)
+				r.Patch("/roles/{roleID}", guildHandler.UpdateRole)
+				r.Delete("/roles/{roleID}", guildHandler.DeleteRole)
+
+				// Guild bans
+				r.Get("/bans", guildHandler.GetBans)
+				r.Put("/bans/{userID}", guildHandler.BanMember)
+				r.Delete("/bans/{userID}", guildHandler.UnbanMember)
+
+				// Audit log
+				r.Get("/audit-logs", guildHandler.GetAuditLog)
 
 				// Guild search
 				r.Get("/messages/search", searchHandler.SearchMessages)
