@@ -8,18 +8,21 @@ interface Props {
   selectedGuildId: string | null;
   onSelectGuild: (id: string) => void;
   onCreateGuild: () => void;
+  onShowFriends: () => void;
+  showFriends: boolean;
 }
 
-export function GuildSidebar({ guilds, selectedGuildId, onSelectGuild, onCreateGuild }: Props) {
+export function GuildSidebar({ guilds, selectedGuildId, onSelectGuild, onCreateGuild, onShowFriends, showFriends }: Props) {
   const [showJoin, setShowJoin] = useState(false);
 
   return (
     <div className="guild-sidebar">
-      {/* DM button */}
+      {/* DM / Friends button */}
       <div
-        className={`guild-icon ${!selectedGuildId ? 'active' : ''}`}
-        title="Direktnachrichten"
+        className={`guild-icon ${showFriends ? 'active' : ''}`}
+        title="Freunde & DMs"
         style={{ marginBottom: 8, fontSize: 22 }}
+        onClick={onShowFriends}
       >
         💬
       </div>

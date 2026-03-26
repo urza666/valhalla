@@ -6,11 +6,13 @@ import { ChannelSidebar } from '../guild/ChannelSidebar';
 import { MemberList } from '../guild/MemberList';
 import { ChatView } from '../chat/ChatView';
 import { LiveKitRoom } from '../voice/LiveKitRoom';
+import { FriendsView } from '../guild/FriendsView';
 
 export function AppLayout() {
   const { user } = useAuthStore();
   const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild } = useAppStore();
   const [showCreateGuild, setShowCreateGuild] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
 
   useEffect(() => {
     loadGuilds();
@@ -24,34 +26,43 @@ export function AppLayout() {
       <GuildSidebar
         guilds={guilds}
         selectedGuildId={selectedGuildId}
-        onSelectGuild={selectGuild}
+        onSelectGuild={(id) => { setShowFriends(false); selectGuild(id); }}
         onCreateGuild={() => setShowCreateGuild(true)}
+        onShowFriends={() => setShowFriends(true)}
+        showFriends={showFriends}
       />
 
-      {/* Channel sidebar */}
-      {selectedGuild && (
-        <ChannelSidebar
-          guild={selectedGuild}
-          user={user!}
-        />
-      )}
-
-      {/* Chat area + Video + Member list */}
-      {selectedChannelId ? (
-        <>
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            <LiveKitRoom />
-            <ChatView channelId={selectedChannelId} />
-          </div>
-          {selectedGuildId && <MemberList guildId={selectedGuildId} />}
-        </>
+      {/* Friends view OR normal server view */}
+      {showFriends ? (
+        <FriendsView />
       ) : (
-        <div className="chat-area">
-          <div className="empty-state">
-            <h2>Welcome to Valhalla</h2>
-            <p>{guilds.length === 0 ? 'Create a server to get started' : 'Select a channel to start chatting'}</p>
-          </div>
-        </div>
+        <>
+          {/* Channel sidebar */}
+          {selectedGuild && (
+            <ChannelSidebar
+              guild={selectedGuild}
+              user={user!}
+            />
+          )}
+
+          {/* Chat area + Video + Member list */}
+          {selectedChannelId ? (
+            <>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <LiveKitRoom />
+                <ChatView channelId={selectedChannelId} />
+              </div>
+              {selectedGuildId && <MemberList guildId={selectedGuildId} />}
+            </>
+          ) : (
+            <div className="chat-area">
+              <div className="empty-state">
+                <h2>Willkommen bei Valhalla</h2>
+                <p>{guilds.length === 0 ? 'Erstelle einen Server' : 'Waehle einen Kanal'}</p>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Create guild modal */}
