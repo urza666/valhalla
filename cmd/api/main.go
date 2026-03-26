@@ -372,3 +372,18 @@ func main() {
 	}
 	log.Info().Msg("server stopped")
 }
+
+// internalOnly restricts access to localhost/private IPs (for /metrics, /debug).
+func internalOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ip := r.RemoteAddr
+		// Allow localhost, Docker internal, and private networks
+		if strings.HasPrefix(ip, "127.") || strings.HasPrefix(ip, "[::1]") ||
+			strings.HasPrefix(ip, "10.") || strings.HasPrefix(ip, "172.") ||
+			strings.HasPrefix(ip, "192.168.") || ip == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		http.Error(w, "Forbidden", http.StatusForbidden)
+	}
+}
