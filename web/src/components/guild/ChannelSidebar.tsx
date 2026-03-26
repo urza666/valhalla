@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAppStore } from '../../stores/app';
 import { useVoiceStore } from '../../stores/voice';
+import { UserSettings } from '../admin/UserSettings';
 import { ContextMenu, useContextMenu } from '../common/ContextMenu';
 import { VoiceConnectedBar } from '../voice/VoiceConnectedBar';
 import { VoiceChannel } from '../voice/VoiceChannel';
@@ -11,13 +12,13 @@ import type { Guild, User, Channel } from '../../api/client';
 interface Props {
   guild: Guild;
   user: User;
-  onLogout: () => void;
 }
 
-export function ChannelSidebar({ guild, user, onLogout }: Props) {
+export function ChannelSidebar({ guild, user }: Props) {
   const { channels, selectedChannelId, selectChannel, loadGuilds } = useAppStore();
   const guildChannels = channels.get(guild.id) || [];
   const [showSettings, setShowSettings] = useState(false);
+  const [showUserSettings, setShowUserSettings] = useState(false);
   const [inviteChannelId, setInviteChannelId] = useState<string | null>(null);
   const channelCtx = useContextMenu();
 
@@ -91,16 +92,16 @@ export function ChannelSidebar({ guild, user, onLogout }: Props) {
 
       <div className="user-panel">
         <div className="user-panel-avatar">{user.username[0].toUpperCase()}</div>
-        <div className="user-panel-info">
+        <div className="user-panel-info" onClick={() => setShowUserSettings(true)} style={{ cursor: 'pointer' }}>
           <div className="user-panel-name">{user.display_name || user.username}</div>
           <div className="user-panel-status">Online</div>
         </div>
         <button
-          onClick={onLogout}
+          onClick={() => setShowUserSettings(true)}
           style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '16px' }}
-          title="Logout"
+          title="Einstellungen"
         >
-          &#x23FB;
+          ⚙
         </button>
       </div>
 
@@ -131,6 +132,11 @@ export function ChannelSidebar({ guild, user, onLogout }: Props) {
       {/* Invite dialog */}
       {inviteChannelId && (
         <InviteDialog channelId={inviteChannelId} onClose={() => setInviteChannelId(null)} />
+      )}
+
+      {/* User settings */}
+      {showUserSettings && (
+        <UserSettings onClose={() => setShowUserSettings(false)} />
       )}
     </div>
   );

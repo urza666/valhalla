@@ -27,6 +27,7 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/kanban"
 	"github.com/valhalla-chat/valhalla/internal/poll"
 	"github.com/valhalla-chat/valhalla/internal/search"
+	"github.com/valhalla-chat/valhalla/internal/user"
 	"github.com/valhalla-chat/valhalla/internal/thread"
 	"github.com/valhalla-chat/valhalla/internal/voice"
 	"github.com/valhalla-chat/valhalla/internal/wiki"
@@ -82,6 +83,9 @@ func main() {
 
 	messageRepo := message.NewRepository(dbPool)
 	messageHandler := message.NewHandler(messageRepo, idGen, gwServer)
+
+	userService := user.NewService(dbPool)
+	userHandler := user.NewHandler(userService)
 
 	dmService := dm.NewService(dbPool, idGen)
 	dmHandler := dm.NewHandler(dmService)
@@ -155,6 +159,10 @@ func main() {
 
 			// Users
 			r.Get("/users/@me", authHandler.Me)
+			r.Patch("/users/@me", userHandler.UpdateProfile)
+			r.Post("/users/@me/password", userHandler.ChangePassword)
+			r.Get("/users/@me/sessions", userHandler.GetSessions)
+			r.Delete("/users/@me/sessions", userHandler.RevokeSession)
 			r.Get("/users/@me/guilds", guildHandler.GetUserGuilds)
 			r.Get("/users/@me/channels", dmHandler.GetUserDMs)
 			r.Post("/users/@me/channels", dmHandler.CreateDM)

@@ -8,7 +8,7 @@ import { ChatView } from '../chat/ChatView';
 import { LiveKitRoom } from '../voice/LiveKitRoom';
 
 export function AppLayout() {
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild } = useAppStore();
   const [showCreateGuild, setShowCreateGuild] = useState(false);
 
@@ -33,7 +33,6 @@ export function AppLayout() {
         <ChannelSidebar
           guild={selectedGuild}
           user={user!}
-          onLogout={logout}
         />
       )}
 
