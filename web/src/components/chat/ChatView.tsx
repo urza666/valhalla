@@ -5,6 +5,8 @@ import { TypingIndicator } from './TypingIndicator';
 import { Markdown } from './Markdown';
 import { Composer } from './Composer';
 import { MessageActions } from './MessageActions';
+import { KanbanBoard } from '../kanban/KanbanBoard';
+import { WikiView } from '../wiki/WikiView';
 import type { Message } from '../../api/client';
 
 interface Props {
@@ -17,6 +19,7 @@ export function ChatView({ channelId }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  const [viewMode, setViewMode] = useState<'chat' | 'board' | 'wiki'>('chat');
 
   const guildChannels = channels.get(selectedGuildId || '') || [];
   const channel = guildChannels.find((c) => c.id === channelId);
@@ -54,8 +57,25 @@ export function ChatView({ channelId }: Props) {
             {channel.topic}
           </span>
         )}
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+          <button className={`friends-tab ${viewMode === 'chat' ? 'active' : ''}`} onClick={() => setViewMode('chat')}>Chat</button>
+          <button className={`friends-tab ${viewMode === 'board' ? 'active' : ''}`} onClick={() => setViewMode('board')}>📋 Board</button>
+          <button className={`friends-tab ${viewMode === 'wiki' ? 'active' : ''}`} onClick={() => setViewMode('wiki')}>📖 Wiki</button>
+        </div>
       </div>
 
+      {/* Board view */}
+      {viewMode === 'board' && selectedGuildId && (
+        <KanbanBoard channelId={channelId} guildId={selectedGuildId} />
+      )}
+
+      {/* Wiki view */}
+      {viewMode === 'wiki' && selectedGuildId && (
+        <WikiView guildId={selectedGuildId} />
+      )}
+
+      {/* Chat view */}
+      {viewMode === 'chat' && <>
       <div className="messages-container">
         {channelMessages.length === 0 ? (
           <div className="empty-state">
@@ -101,6 +121,7 @@ export function ChatView({ channelId }: Props) {
         replyToId={replyTo?.id}
         onReplySent={() => setReplyTo(null)}
       />
+      </>}
     </div>
   );
 }

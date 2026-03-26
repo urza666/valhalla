@@ -1193,6 +1193,64 @@ body {
   text-overflow: ellipsis;
 }
 
+/* ═══ Kanban ═══ */
+.kanban-loading, .kanban-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 12px; color: var(--text-muted); padding: 40px; }
+.kanban-empty h3 { color: var(--text-primary); font-size: 18px; }
+.kanban-board-list { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.kanban-board-card { padding: 12px 20px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--bg-secondary); color: var(--text-primary); font-size: 15px; cursor: pointer; }
+.kanban-board-card:hover { border-color: var(--brand-primary); background: var(--bg-card-hover, var(--bg-tertiary)); }
+.kanban-container { display: flex; flex-direction: column; height: 100%; }
+.kanban-header { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--bg-tertiary); }
+.kanban-header h3 { font-size: 16px; }
+.kanban-columns { display: flex; gap: 12px; padding: 16px; overflow-x: auto; flex: 1; align-items: flex-start; }
+.kanban-column { min-width: 272px; max-width: 272px; background: var(--bg-secondary); border-radius: 8px; display: flex; flex-direction: column; max-height: calc(100vh - 200px); }
+.kanban-column.drop-target { outline: 2px dashed var(--brand-primary); outline-offset: -2px; }
+.kanban-column-header { display: flex; align-items: center; gap: 8px; padding: 12px; font-weight: 600; font-size: 13px; text-transform: uppercase; color: var(--text-secondary); }
+.kanban-column-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.kanban-count { margin-left: auto; background: var(--bg-tertiary); border-radius: 10px; padding: 1px 8px; font-size: 12px; color: var(--text-muted); }
+.kanban-cards { flex: 1; overflow-y: auto; padding: 0 8px 8px; display: flex; flex-direction: column; gap: 6px; }
+.kanban-card { background: var(--bg-primary); border-radius: 4px; padding: 10px; cursor: grab; border: 1px solid transparent; }
+.kanban-card:hover { border-color: var(--border-subtle); }
+.kanban-card.completed { opacity: 0.5; }
+.kanban-card-header { display: flex; align-items: flex-start; gap: 8px; }
+.kanban-card-header input[type="checkbox"] { margin-top: 3px; }
+.kanban-card-title { flex: 1; font-size: 14px; word-break: break-word; }
+.kanban-card-delete { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; padding: 0; line-height: 1; visibility: hidden; }
+.kanban-card:hover .kanban-card-delete { visibility: visible; }
+.kanban-card-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; padding-left: 24px; }
+.kanban-add input { width: 100%; padding: 8px 12px; border: none; border-radius: 0 0 8px 8px; background: transparent; color: var(--text-muted); font-size: 13px; outline: none; }
+.kanban-add input:focus { color: var(--text-primary); background: var(--bg-tertiary); }
+
+/* ═══ Wiki ═══ */
+.wiki-container { display: flex; flex: 1; height: 100%; }
+.wiki-sidebar { width: 220px; background: var(--bg-secondary); display: flex; flex-direction: column; border-right: 1px solid var(--bg-tertiary); }
+.wiki-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 12px; font-weight: 600; border-bottom: 1px solid var(--bg-tertiary); }
+.wiki-page-list { flex: 1; overflow-y: auto; padding: 4px; }
+.wiki-page-item { padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--text-secondary); }
+.wiki-page-item:hover { background: rgba(255,255,255,0.04); }
+.wiki-page-item.active { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+.wiki-content { flex: 1; overflow-y: auto; padding: 32px; }
+.wiki-editor { display: flex; flex-direction: column; height: 100%; }
+.wiki-title-input { font-size: 24px; font-weight: 700; padding: 8px 0; border: none; background: transparent; color: var(--text-primary); outline: none; border-bottom: 2px solid var(--brand-primary); margin-bottom: 16px; }
+.wiki-content-input { flex: 1; min-height: 400px; padding: 12px; border: 1px solid var(--border-subtle); border-radius: 4px; background: var(--bg-tertiary); color: var(--text-primary); font-size: 15px; font-family: var(--font-code); line-height: 1.6; resize: vertical; outline: none; }
+.wiki-reader-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.wiki-reader-header h1 { font-size: 28px; }
+.wiki-reader-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 24px; }
+.wiki-reader-body { font-size: 16px; line-height: 1.7; color: var(--text-secondary); }
+.wiki-reader-body strong { color: var(--text-primary); }
+
+/* ═══ Polls ═══ */
+.poll-card { background: var(--bg-secondary); border-radius: 8px; padding: 16px; margin-top: 8px; max-width: 480px; }
+.poll-question { font-weight: 600; font-size: 16px; margin-bottom: 12px; }
+.poll-options { display: flex; flex-direction: column; gap: 6px; }
+.poll-option { position: relative; display: flex; align-items: center; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 6px; background: transparent; color: var(--text-primary); font-size: 14px; cursor: pointer; overflow: hidden; text-align: left; }
+.poll-option:hover { border-color: var(--brand-primary); }
+.poll-option.voted { border-color: var(--brand-primary); }
+.poll-option-bar { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(88,101,242,0.15); border-radius: 6px; transition: width 0.3s; z-index: 0; }
+.poll-option-text { position: relative; z-index: 1; flex: 1; }
+.poll-option-count { position: relative; z-index: 1; font-size: 13px; color: var(--text-muted); margin-left: 8px; }
+.poll-footer { margin-top: 8px; font-size: 13px; color: var(--text-muted); }
+
 /* Friends */
 .friends-tab { padding: 4px 12px; border: none; border-radius: 4px; background: none; color: var(--text-muted); font-size: 14px; font-weight: 500; cursor: pointer; }
 .friends-tab:hover { background: rgba(255,255,255,0.04); color: var(--text-primary); }
