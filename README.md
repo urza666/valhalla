@@ -52,7 +52,7 @@ docker compose version    # Sollte "Docker Compose version v2.x.x" zeigen
 
 ```bash
 # 1. Projekt herunterladen
-git clone https://dgit01p.infra.ip413.de/bot_athene/valhalla.git
+git clone https://github.com/urza666/valhalla.git
 cd valhalla
 
 # 2. Automatisches Setup starten

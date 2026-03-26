@@ -1,7 +1,7 @@
 # =============================================================================
 # Valhalla — Staging VM (DEV Environment)
 # =============================================================================
-# Host: dval01e.infra.ip413.de (192.168.0.193)
+# Host: Retrieve from Vault: secret/data/valhalla
 #
 # Sizing:
 #   2 vCPU   — API + Gateway + Frontend
@@ -14,8 +14,8 @@ module "dval01e" {
 
   hostname     = "dval01e"
   folder       = "DEV"
-  ipv4_address = "192.168.0.193"
-  datastore    = "desx01p-ds-2TB-02"
+  ipv4_address = "# Vault: staging_ip"
+  datastore    = "# Vault: vsphere/datastore"
 
   cpu       = 2
   memory_mb = 4096

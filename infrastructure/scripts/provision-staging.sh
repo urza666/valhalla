@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 echo "=== Valhalla Staging Provisioning ==="
-hostnamectl set-hostname dval01e.infra.ip413.de
+hostnamectl set-hostname $VAULT_STAGING_FQDN # From Vault: secret/data/valhalla
 echo "✓ Hostname"
 dnf update -y -q
 if ! command -v docker &>/dev/null; then
@@ -28,11 +28,11 @@ fi
 echo "✓ Firewall"
 REPO=/opt/valhalla
 if [ ! -d "$REPO" ]; then
-    GIT_SSL_NO_VERIFY=1 git clone https://bot_athene:MArs1234567890!@dgit01p.infra.ip413.de/bot_athene/valhalla.git "$REPO"
+    GIT_SSL_NO_VERIFY=1 git clone $VAULT_GIT_REPO_URL # From Vault: secret/data/valhalla "$REPO"
     chown -R deploy:deploy "$REPO"
 else
     cd "$REPO" && GIT_SSL_NO_VERIFY=1 git pull
 fi
 echo "✓ Repo"
 cd "$REPO" && sudo -u deploy bash setup.sh
-echo "=== Done: http://192.168.0.193:3080 ==="
+echo "=== Done: http://$VAULT_STAGING_IP:3080 ==="

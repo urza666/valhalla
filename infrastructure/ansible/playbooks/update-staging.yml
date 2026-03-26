@@ -8,7 +8,7 @@
     - name: Pull latest code
       become_user: deploy
       git:
-        repo: "https://bot_athene:MArs1234567890!@dgit01p.infra.ip413.de/bot_athene/valhalla.git"
+        repo: "# Vault: secret/data/valhalla → git_repo_url"
         dest: /opt/valhalla
         version: main
       environment:

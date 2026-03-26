@@ -720,7 +720,7 @@ Konfiguration pro Server -- verschiedene Server konnen verschiedene Identity Pro
 ### Installation
 
 ```bash
-git clone https://dgit01p.infra.ip413.de/bot_athene/valhalla.git
+git clone https://github.com/urza666/valhalla.git
 cd valhalla
 ./setup.sh
 ```

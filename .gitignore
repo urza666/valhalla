@@ -40,3 +40,5 @@ web/.next/
 tmp/
 *.tmp
 .claude/
+
+# Internal team roles (not for public repo)

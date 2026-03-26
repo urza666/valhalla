@@ -1,11 +1,11 @@
 ---
-valhalla_repo_url: "https://bot_athene:MArs1234567890!@dgit01p.infra.ip413.de/bot_athene/valhalla.git"
+valhalla_repo_url: "# Retrieve from Vault: secret/data/valhalla → git_repo_url"
 valhalla_install_dir: "/opt/valhalla"
 valhalla_user: "deploy"
-valhalla_domain: "infra.ip413.de"
+valhalla_domain: "{{ vault_domain }}" # Vault: secret/data/valhalla → domain
 valhalla_dns_servers:
-  - "192.168.0.10"
-  - "192.168.0.11"
+  - "{{ vault_dns_1 }}" # Vault: secret/data/valhalla → dns_server_1
+  - "{{ vault_dns_2 }}" # Vault: secret/data/valhalla → dns_server_2
 valhalla_firewall_ports:
   - 80/tcp
   - 443/tcp

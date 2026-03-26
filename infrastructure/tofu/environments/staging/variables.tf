@@ -1,6 +1,6 @@
 variable "vsphere_user" {
   type    = string
-  default = "bot_athene@vsphere.local"
+  default = "# Vault: vsphere/user"
 }
 
 variable "vsphere_password" {
@@ -10,5 +10,5 @@ variable "vsphere_password" {
 
 variable "vsphere_server" {
   type    = string
-  default = "dvsp01p.ip413.de"
+  default = "# Vault: vsphere/server"
 }

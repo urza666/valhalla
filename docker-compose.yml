@@ -27,10 +27,11 @@ services:
       context: .
       dockerfile: deployments/Dockerfile.web
     ports:
-      - "${WEB_PORT:-3080}:443"
-    volumes:
-      - /etc/pki/tls/certs/s058.ip413.de.crt:/etc/ssl/certs/valhalla.crt:ro
-      - /etc/pki/tls/private/s058.ip413.de.key:/etc/ssl/private/valhalla.key:ro
+      - "${WEB_PORT:-3080}:80"
+    # TLS: Mount certificates from Vault/IPA (see docs/DEPLOYMENT.md)
+    # volumes:
+    #   - ${TLS_CERT_PATH}:/etc/ssl/certs/valhalla.crt:ro
+    #   - ${TLS_KEY_PATH}:/etc/ssl/private/valhalla.key:ro
     depends_on:
       api:
         condition: service_healthy
