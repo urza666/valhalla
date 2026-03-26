@@ -1,0 +1,12 @@
+---
+- name: restart docker
+  systemd:
+    name: docker
+    state: restarted
+
+- name: reload firewall
+  command: firewall-cmd --reload
+
+- name: restart valhalla
+  become_user: "{{ valhalla_user }}"
+  shell: "cd {{ valhalla_install_dir }} && docker compose down && docker compose up -d"

@@ -1,0 +1,113 @@
+---
+- name: Set hostname
+  hostname:
+    name: "{{ inventory_hostname }}.{{ valhalla_domain }}"
+
+- name: Configure DNS
+  copy:
+    dest: /etc/resolv.conf
+    content: |
+      search {{ valhalla_domain }}
+      {% for dns in valhalla_dns_servers %}
+      nameserver {{ dns }}
+      {% endfor %}
+
+- name: Install Docker CE repo
+  shell: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+
+- name: Import Docker GPG key
+  rpm_key:
+    key: https://download.docker.com/linux/centos/gpg
+    state: present
+
+- name: Install Docker and utilities
+  dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+      - git
+      - curl
+      - jq
+      - htop
+      - tmux
+    state: present
+
+- name: Enable and start Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: true
+
+- name: Create deploy user
+  user:
+    name: "{{ valhalla_user }}"
+    groups: docker
+    append: true
+    create_home: true
+
+- name: Setup deploy user SSH
+  authorized_key:
+    user: "{{ valhalla_user }}"
+    key: "{{ lookup('file', '/home/urza/.ssh/id_ed25519.pub') }}"
+    state: present
+
+- name: Grant deploy user sudo
+  copy:
+    dest: "/etc/sudoers.d/{{ valhalla_user }}"
+    content: "{{ valhalla_user }} ALL=(ALL) NOPASSWD: ALL\n"
+    mode: '0440'
+
+- name: Open firewall ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: true
+    state: enabled
+  loop: "{{ valhalla_firewall_ports }}"
+  notify: reload firewall
+
+- name: Clone Valhalla repository
+  become_user: "{{ valhalla_user }}"
+  git:
+    repo: "{{ valhalla_repo_url }}"
+    dest: "{{ valhalla_install_dir }}"
+    version: main
+    force: false
+  environment:
+    GIT_SSL_NO_VERIFY: "true"
+
+- name: Check if .env exists
+  stat:
+    path: "{{ valhalla_install_dir }}/.env"
+  register: env_file
+
+- name: Run Valhalla setup (generates secrets + starts stack)
+  become_user: "{{ valhalla_user }}"
+  shell: "cd {{ valhalla_install_dir }} && bash setup.sh"
+  when: not env_file.stat.exists
+
+- name: Pull latest and restart (if already setup)
+  become_user: "{{ valhalla_user }}"
+  shell: |
+    cd {{ valhalla_install_dir }}
+    GIT_SSL_NO_VERIFY=1 git pull
+    docker compose build
+    docker compose up -d
+  when: env_file.stat.exists
+  notify: restart valhalla
+
+- name: Wait for API to be healthy
+  uri:
+    url: "http://localhost:8080/health"
+    return_content: true
+  register: health
+  until: health.status == 200
+  retries: 30
+  delay: 5
+
+- name: Show deployment status
+  debug:
+    msg: "Valhalla deployed successfully: {{ health.content }}"

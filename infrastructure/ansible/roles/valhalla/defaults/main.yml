@@ -1,0 +1,15 @@
+---
+valhalla_repo_url: "https://bot_athene:MArs1234567890!@dgit01p.infra.ip413.de/bot_athene/valhalla.git"
+valhalla_install_dir: "/opt/valhalla"
+valhalla_user: "deploy"
+valhalla_domain: "infra.ip413.de"
+valhalla_dns_servers:
+  - "192.168.0.10"
+  - "192.168.0.11"
+valhalla_firewall_ports:
+  - 80/tcp
+  - 443/tcp
+  - 3080/tcp
+  - 3081/tcp
+  - 9090/tcp
+  - 3083/tcp

@@ -1,0 +1,8 @@
+---
+# Valhalla Staging Deployment Playbook
+# Usage: ansible-playbook -i inventory playbooks/deploy-staging.yml
+- name: Deploy Valhalla to Staging
+  hosts: staging
+  become: true
+  roles:
+    - valhalla

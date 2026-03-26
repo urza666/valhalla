@@ -1,0 +1,35 @@
+---
+# Valhalla Staging Update Playbook (git pull + rebuild)
+# Usage: ansible-playbook -i inventory playbooks/update-staging.yml
+- name: Update Valhalla on Staging
+  hosts: staging
+  become: true
+  tasks:
+    - name: Pull latest code
+      become_user: deploy
+      git:
+        repo: "https://bot_athene:MArs1234567890!@dgit01p.infra.ip413.de/bot_athene/valhalla.git"
+        dest: /opt/valhalla
+        version: main
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+
+    - name: Rebuild and restart
+      become_user: deploy
+      shell: |
+        cd /opt/valhalla
+        docker compose build
+        docker compose up -d
+      register: deploy_result
+
+    - name: Wait for healthy
+      uri:
+        url: "http://localhost:8080/health"
+      register: health
+      until: health.status == 200
+      retries: 20
+      delay: 5
+
+    - name: Status
+      debug:
+        msg: "{{ health.content }}"

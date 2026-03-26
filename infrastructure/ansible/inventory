@@ -1,0 +1,6 @@
+[staging]
+dval01e ansible_host=192.168.0.193 ansible_user=root ansible_ssh_private_key_file=/home/urza/.ssh/id_ed25519
+
+[production]
+# Current prod runs on local docker (192.168.0.58)
+# dval01p ansible_host=192.168.0.58 ansible_user=urza
