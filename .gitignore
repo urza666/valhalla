@@ -1,0 +1,41 @@
+# Binaries
+/bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Go
+/vendor/
+*.test
+*.out
+go.work
+go.work.sum
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (web/)
+web/node_modules/
+web/dist/
+web/.next/
+
+# Docker
+*.log
+
+# Temp
+tmp/
+*.tmp

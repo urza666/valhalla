@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Valhalla — Open Source Communication Platform</title>
+  <meta name="description" content="A modern, self-hostable platform for text, voice, and video communication. Built for communities and teams. Free and open source.">
+  <meta property="og:title" content="Valhalla — Open Source Communication Platform">
+  <meta property="og:description" content="Text, Voice, Video, Kanban, Wiki — all in one self-hostable platform.">
+  <meta property="og:type" content="website">
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --bg-card: #1a1a24;
+      --bg-card-hover: #22223a;
+      --brand: #5865f2;
+      --brand-glow: rgba(88, 101, 242, 0.3);
+      --green: #23a55a;
+      --yellow: #f0b232;
+      --text: #e8e9ed;
+      --text-secondary: #9ca0ab;
+      --text-muted: #6b6f7b;
+      --border: #2a2a3a;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 120px 20px 80px;
+      background: radial-gradient(ellipse at top, rgba(88,101,242,0.15) 0%, transparent 60%);
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(88,101,242,0.15);
+      border: 1px solid rgba(88,101,242,0.3);
+      color: var(--brand);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(40px, 6vw, 72px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      background: linear-gradient(135deg, var(--text) 0%, var(--brand) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero p {
+      font-size: clamp(16px, 2vw, 20px);
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 40px;
+    }
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.2s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: var(--brand);
+      color: white;
+    }
+    .btn-primary:hover { background: #4752c4; text-decoration: none; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-outline:hover { border-color: var(--brand); text-decoration: none; }
+
+    /* Sections */
+    .section {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 80px 20px;
+    }
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    .section-header h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .section-header p {
+      color: var(--text-secondary);
+      font-size: 18px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Feature Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      transition: all 0.2s;
+    }
+    .feature-card:hover {
+      border-color: var(--brand);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    .feature-tag {
+      display: inline-block;
+      background: rgba(35, 165, 90, 0.15);
+      color: var(--green);
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+    .feature-tag.new {
+      background: rgba(88, 101, 242, 0.15);
+      color: var(--brand);
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 60px;
+      flex-wrap: wrap;
+      padding: 40px 20px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat { text-align: center; }
+    .stat-number {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--brand);
+    }
+    .stat-label {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Tech Stack */
+    .tech-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .tech-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .tech-item strong { display: block; margin-bottom: 4px; }
+    .tech-item span { color: var(--text-muted); font-size: 13px; }
+
+    /* Open Source Message */
+    .oss-section {
+      text-align: center;
+      padding: 80px 20px;
+      background: radial-gradient(ellipse at bottom, rgba(35,165,90,0.1) 0%, transparent 60%);
+    }
+    .oss-section h2 {
+      font-size: 32px;
+      margin-bottom: 16px;
+    }
+    .oss-section .heart {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    .oss-section p {
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto 24px;
+      font-size: 17px;
+    }
+    .license-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 600px;
+      margin: 30px auto 0;
+      text-align: left;
+    }
+    .license-box h4 { margin-bottom: 12px; }
+    .license-box li {
+      color: var(--text-secondary);
+      font-size: 14px;
+      margin-bottom: 6px;
+      list-style: none;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Quick Start Code */
+    .code-block {
+      background: #0d0d14;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      overflow-x: auto;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 14px;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .code-block .comment { color: var(--text-muted); }
+    .code-block .cmd { color: var(--green); }
+
+    @media (max-width: 768px) {
+      .hero { padding: 80px 20px 60px; }
+      .stats { gap: 30px; }
+      .features-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">Open Source &middot; Self-Hostable &middot; Community-First</div>
+    <h1>Valhalla</h1>
+    <p>
+      A modern real-time communication platform for communities and teams.
+      Text, voice, video, kanban, wiki — all in one place. Free forever.
+    </p>
+    <div class="hero-buttons">
+      <a href="https://dgit01p.infra.ip413.de/bot_athene/lan-party-platform" class="btn btn-primary">
+        View Source Code
+      </a>
+      <a href="#quickstart" class="btn btn-outline">
+        Quick Start
+      </a>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats">
+    <div class="stat">
+      <div class="stat-number">11,700+</div>
+      <div class="stat-label">Lines of Code</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">57</div>
+      <div class="stat-label">API Endpoints</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">39</div>
+      <div class="stat-label">Database Tables</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">3</div>
+      <div class="stat-label">Client Platforms</div>
+    </div>
+    <div class="stat">
+      <div class="stat-number">23</div>
+      <div class="stat-label">Backend Services</div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Everything your community needs</h2>
+      <p>All the features you love from Discord, plus the business tools you've been missing.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>Rich Text Messaging</h3>
+        <p>Markdown, reactions, replies, threads, file uploads, embeds, and link previews. Everything you'd expect from a modern chat.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎙️</div>
+        <h3>Voice & Video</h3>
+        <p>Persistent voice channels powered by LiveKit. Camera, screen share, and adaptive quality. Just click and talk.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <h3>Kanban Boards</h3>
+        <p>In-channel task management with drag-and-drop. Assign, prioritize, and track — without leaving the conversation.</p>
+        <span class="feature-tag new">Unique to Valhalla</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📖</div>
+        <h3>Wiki / Knowledge Base</h3>
+        <p>Per-guild documentation with revision history. Markdown editor, hierarchical pages, never lose institutional knowledge.</p>
+        <span class="feature-tag new">Unique to Valhalla</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Native Polls</h3>
+        <p>Multi-select polls with expiry and live results. No bots needed.</p>
+        <span class="feature-tag new">Unique to Valhalla</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Roles & Permissions</h3>
+        <p>53-bit hierarchical permission engine with channel overrides. Fine-grained control over who can do what, where.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <h3>SSO / SAML</h3>
+        <p>Enterprise Single Sign-On with SAML 2.0 and OIDC. Connect to Okta, Azure AD, or any identity provider.</p>
+        <span class="feature-tag new">Enterprise</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📜</div>
+        <h3>Compliance</h3>
+        <p>Message retention policies, legal holds, and audit exports. Meet regulatory requirements without third-party tools.</p>
+        <span class="feature-tag new">Enterprise</span>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>Bot API</h3>
+        <p>Build custom integrations with applications, slash commands, and webhooks. Full API access for automation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Full-Text Search</h3>
+        <p>Lightning-fast message search powered by Meilisearch. Filter by author, channel, date, and more.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏠</div>
+        <h3>Self-Hostable</h3>
+        <p>One-command deployment with Docker Compose. Your data, your server, your rules. Auto-TLS via Caddy.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Cross-Platform</h3>
+        <p>Web (React), Desktop (Tauri — 10x lighter than Electron), and Mobile (React Native). Same experience everywhere.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section class="section">
+    <div class="section-header">
+      <h2>Built with proven technology</h2>
+      <p>Production-grade stack, no experiments.</p>
+    </div>
+    <div class="tech-grid">
+      <div class="tech-item"><strong>Go 1.22</strong><span>Backend</span></div>
+      <div class="tech-item"><strong>React 19</strong><span>Web Client</span></div>
+      <div class="tech-item"><strong>Tauri 2.0</strong><span>Desktop</span></div>
+      <div class="tech-item"><strong>React Native</strong><span>Mobile</span></div>
+      <div class="tech-item"><strong>PostgreSQL 16</strong><span>Database</span></div>
+      <div class="tech-item"><strong>Redis 7</strong><span>Cache & Pub/Sub</span></div>
+      <div class="tech-item"><strong>LiveKit</strong><span>Voice & Video</span></div>
+      <div class="tech-item"><strong>Meilisearch</strong><span>Search</span></div>
+      <div class="tech-item"><strong>NATS</strong><span>Message Broker</span></div>
+      <div class="tech-item"><strong>Caddy</strong><span>Reverse Proxy</span></div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section class="section" id="quickstart">
+    <div class="section-header">
+      <h2>Up and running in minutes</h2>
+      <p>Self-host Valhalla with a single command.</p>
+    </div>
+    <div class="code-block">
+      <span class="comment"># Clone the repository</span><br>
+      <span class="cmd">git clone https://dgit01p.infra.ip413.de/bot_athene/lan-party-platform.git valhalla</span><br>
+      <span class="cmd">cd valhalla/deployments</span><br>
+      <br>
+      <span class="comment"># Run the setup script (generates secrets, starts everything)</span><br>
+      <span class="cmd">./setup.sh</span><br>
+      <br>
+      <span class="comment"># That's it. Open https://your-domain in your browser.</span>
+    </div>
+  </section>
+
+  <!-- Open Source -->
+  <section class="oss-section">
+    <div class="heart">&#10084;&#65039;</div>
+    <h2>Built for the community, by the community</h2>
+    <p>
+      Valhalla exists because of the incredible open source community.
+      Every library, every tool, every framework that made this possible — thank you.
+      This project is my way of giving back.
+    </p>
+    <p>
+      Fork it. Extend it. Make it yours. Just keep it open.
+    </p>
+    <div class="license-box">
+      <h4>License: AGPL-3.0 + Commons Clause</h4>
+      <ul>
+        <li>&#10003; Free for personal, educational, and non-commercial use</li>
+        <li>&#10003; Self-host for your community or team</li>
+        <li>&#10003; Modify and contribute back</li>
+        <li>&#10003; Fork and create derivative works</li>
+        <li>&#10007; Commercial use requires a separate license</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Valhalla &mdash; Open Source Communication Platform &mdash; Made with dedication to the open source community</p>
+    <p style="margin-top: 8px;">
+      <a href="https://dgit01p.infra.ip413.de/bot_athene/lan-party-platform">Source Code</a> &middot;
+      <a href="https://dgit01p.infra.ip413.de/bot_athene/lan-party-platform/-/blob/main/LICENSE">License</a> &middot;
+      <a href="https://dgit01p.infra.ip413.de/bot_athene/lan-party-platform/-/blob/main/CONTRIBUTING.md">Contribute</a>
+    </p>
+  </footer>
+
+</body>
+</html>

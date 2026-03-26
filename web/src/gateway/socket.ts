@@ -1,0 +1,150 @@
+type EventHandler = (data: unknown) => void;
+
+const OP_DISPATCH = 0;
+const OP_HEARTBEAT = 1;
+const OP_IDENTIFY = 2;
+const OP_HELLO = 10;
+const OP_HEARTBEAT_ACK = 11;
+
+export class GatewaySocket {
+  private ws: WebSocket | null = null;
+  private heartbeatInterval: number | null = null;
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private sequence: number | null = null;
+  private sessionId: string | null = null;
+  private token: string;
+  private listeners = new Map<string, Set<EventHandler>>();
+  private reconnectAttempts = 0;
+  private maxReconnectAttempts = 10;
+
+  constructor(token: string) {
+    this.token = token;
+  }
+
+  connect() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = `${protocol}//${window.location.host}/ws`;
+
+    this.ws = new WebSocket(url);
+
+    this.ws.onopen = () => {
+      console.log('[Gateway] Connected');
+      this.reconnectAttempts = 0;
+    };
+
+    this.ws.onmessage = (event) => {
+      const payload = JSON.parse(event.data);
+      this.handlePayload(payload);
+    };
+
+    this.ws.onclose = (event) => {
+      console.log('[Gateway] Disconnected', event.code, event.reason);
+      this.cleanup();
+
+      if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 60000);
+        const jitter = Math.random() * 1000;
+        console.log(`[Gateway] Reconnecting in ${delay + jitter}ms...`);
+        setTimeout(() => {
+          this.reconnectAttempts++;
+          this.connect();
+        }, delay + jitter);
+      }
+    };
+
+    this.ws.onerror = (error) => {
+      console.error('[Gateway] Error:', error);
+    };
+  }
+
+  disconnect() {
+    this.maxReconnectAttempts = 0;
+    this.ws?.close(1000, 'Client disconnect');
+    this.cleanup();
+  }
+
+  on(event: string, handler: EventHandler) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(handler);
+    return () => this.listeners.get(event)?.delete(handler);
+  }
+
+  private handlePayload(payload: { op: number; d?: unknown; s?: number; t?: string }) {
+    if (payload.s !== undefined && payload.s !== null) {
+      this.sequence = payload.s;
+    }
+
+    switch (payload.op) {
+      case OP_HELLO:
+        this.handleHello(payload.d as { heartbeat_interval: number });
+        break;
+      case OP_HEARTBEAT_ACK:
+        break;
+      case OP_DISPATCH:
+        this.handleDispatch(payload.t!, payload.d);
+        break;
+    }
+  }
+
+  private handleHello(data: { heartbeat_interval: number }) {
+    this.heartbeatInterval = data.heartbeat_interval;
+
+    // Send first heartbeat after random jitter
+    const jitter = Math.random() * this.heartbeatInterval;
+    setTimeout(() => {
+      this.sendHeartbeat();
+      this.heartbeatTimer = setInterval(() => this.sendHeartbeat(), this.heartbeatInterval!);
+    }, jitter);
+
+    // Identify
+    this.send({
+      op: OP_IDENTIFY,
+      d: {
+        token: this.token,
+        properties: {
+          os: navigator.platform,
+          browser: 'valhalla-web',
+        },
+      },
+    });
+  }
+
+  private handleDispatch(eventName: string, data: unknown) {
+    if (eventName === 'READY') {
+      const ready = data as { session_id: string; user: unknown; guilds: unknown[] };
+      this.sessionId = ready.session_id;
+      console.log('[Gateway] Ready, session:', this.sessionId);
+    }
+
+    // Emit to listeners
+    const handlers = this.listeners.get(eventName);
+    if (handlers) {
+      handlers.forEach((handler) => handler(data));
+    }
+
+    // Also emit wildcard
+    const wildcardHandlers = this.listeners.get('*');
+    if (wildcardHandlers) {
+      wildcardHandlers.forEach((handler) => handler({ t: eventName, d: data }));
+    }
+  }
+
+  private sendHeartbeat() {
+    this.send({ op: OP_HEARTBEAT, d: this.sequence });
+  }
+
+  private send(payload: unknown) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(payload));
+    }
+  }
+
+  private cleanup() {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+}

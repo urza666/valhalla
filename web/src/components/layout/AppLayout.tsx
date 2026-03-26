@@ -1,0 +1,109 @@
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '../../stores/auth';
+import { useAppStore } from '../../stores/app';
+import { GuildSidebar } from '../guild/GuildSidebar';
+import { ChannelSidebar } from '../guild/ChannelSidebar';
+import { MemberList } from '../guild/MemberList';
+import { ChatView } from '../chat/ChatView';
+import { LiveKitRoom } from '../voice/LiveKitRoom';
+
+export function AppLayout() {
+  const { user, logout } = useAuthStore();
+  const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild } = useAppStore();
+  const [showCreateGuild, setShowCreateGuild] = useState(false);
+
+  useEffect(() => {
+    loadGuilds();
+  }, [loadGuilds]);
+
+  const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
+
+  return (
+    <div className="app-layout">
+      {/* Guild sidebar (leftmost) */}
+      <GuildSidebar
+        guilds={guilds}
+        selectedGuildId={selectedGuildId}
+        onSelectGuild={selectGuild}
+        onCreateGuild={() => setShowCreateGuild(true)}
+      />
+
+      {/* Channel sidebar */}
+      {selectedGuild && (
+        <ChannelSidebar
+          guild={selectedGuild}
+          user={user!}
+          onLogout={logout}
+        />
+      )}
+
+      {/* Chat area + Video + Member list */}
+      {selectedChannelId ? (
+        <>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <LiveKitRoom />
+            <ChatView channelId={selectedChannelId} />
+          </div>
+          {selectedGuildId && <MemberList guildId={selectedGuildId} />}
+        </>
+      ) : (
+        <div className="chat-area">
+          <div className="empty-state">
+            <h2>Welcome to Valhalla</h2>
+            <p>{guilds.length === 0 ? 'Create a server to get started' : 'Select a channel to start chatting'}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Create guild modal */}
+      {showCreateGuild && (
+        <CreateGuildModal onClose={() => setShowCreateGuild(false)} />
+      )}
+    </div>
+  );
+}
+
+function CreateGuildModal({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { createGuild } = useAppStore();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setLoading(true);
+    try {
+      await createGuild(name.trim());
+      onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    }} onClick={onClose}>
+      <form className="auth-form" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+        <h1>Create a Server</h1>
+        <p>Give your new server a name</p>
+        <div className="form-group">
+          <label>Server Name</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            minLength={2}
+            maxLength={100}
+            autoFocus
+          />
+        </div>
+        <button type="submit" className="btn" disabled={loading}>
+          {loading ? 'Creating...' : 'Create'}
+        </button>
+      </form>
+    </div>
+  );
+}

@@ -1,0 +1,84 @@
+                    Valhalla — Open Source License
+                    ================================
+
+    Copyright (c) 2026 bot_athene & Contributors
+
+    This project is dual-licensed:
+
+    1. For NON-COMMERCIAL use:
+       Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+       See below for the full AGPL-3.0 text reference.
+
+    2. For COMMERCIAL use:
+       A separate commercial license is REQUIRED.
+       Contact the original author for commercial licensing terms.
+
+    ────────────────────────────────────────────────────────────
+
+    COMMONS CLAUSE — Commercial Use Restriction
+    ────────────────────────────────────────────────────────────
+
+    The Software is provided to you by the Licensor under the AGPL-3.0
+    License, as defined below, subject to the following condition:
+
+    Without limiting other conditions in the License, the grant of rights
+    under the License will not include, and the License does not grant to
+    you, the right to Sell the Software.
+
+    For purposes of the foregoing, "Sell" means practicing any or all of
+    the rights granted to you under the License to provide to third parties,
+    for a fee or other consideration (including without limitation fees for
+    hosting or consulting/support services related to the Software), a
+    product or service whose value derives, entirely or substantially, from
+    the functionality of the Software.
+
+    Any license notice or attribution required by the License must also
+    include this Commons Clause License Condition notice.
+
+    For commercial licensing inquiries, contact: bot_athene
+
+    ────────────────────────────────────────────────────────────
+
+    AGPL-3.0 License Summary
+    ────────────────────────────────────────────────────────────
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+    ────────────────────────────────────────────────────────────
+
+    WHAT THIS MEANS IN PRACTICE:
+    ────────────────────────────────────────────────────────────
+
+    ✅ You CAN:
+       - Use Valhalla for personal, educational, and non-commercial purposes
+       - Modify the source code
+       - Self-host for your community, team, or organization (non-commercial)
+       - Contribute improvements back to the project
+       - Fork and create derivative works (non-commercial, AGPL-3.0 terms apply)
+
+    ❌ You CANNOT (without a commercial license):
+       - Sell Valhalla or services substantially based on it
+       - Offer Valhalla as a paid hosted service (SaaS)
+       - Include Valhalla in a commercial product
+       - Remove or alter this license notice
+
+    🤝 For COMMERCIAL use:
+       - Contact the original author for licensing terms
+       - Revenue sharing or licensing fees apply
+       - Custom terms available for startups, enterprises, and resellers
+
+    ────────────────────────────────────────────────────────────
+
+    This project exists because of the incredible open source community.
+    Thank you to everyone who builds and shares freely. 🙏

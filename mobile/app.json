@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Valhalla",
+    "slug": "valhalla",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "valhalla",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#1e1f22"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.valhalla.mobile",
+      "infoPlist": {
+        "UIBackgroundModes": ["audio", "voip", "remote-notification"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1e1f22"
+      },
+      "package": "com.valhalla.mobile"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-notifications",
+      "expo-secure-store",
+      [
+        "@livekit/react-native",
+        {
+          "enableScreenCapture": true
+        }
+      ]
+    ]
+  }
+}

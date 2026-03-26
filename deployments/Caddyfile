@@ -1,0 +1,23 @@
+# Replace with your domain
+{$DOMAIN:localhost} {
+    # API + WebSocket
+    reverse_proxy /api/* valhalla:8080
+    reverse_proxy /ws valhalla:8080
+    reverse_proxy /health valhalla:8080
+
+    # Static web client (SPA fallback)
+    root * /srv/web
+    try_files {path} /index.html
+    file_server
+
+    # Security headers
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+
+    # Compression
+    encode gzip zstd
+}

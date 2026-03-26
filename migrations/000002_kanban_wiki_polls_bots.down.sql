@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS slash_commands;
+DROP TABLE IF EXISTS applications;
+DROP TABLE IF EXISTS poll_votes;
+DROP TABLE IF EXISTS poll_options;
+DROP TABLE IF EXISTS polls;
+DROP TABLE IF EXISTS wiki_revisions;
+DROP TABLE IF EXISTS wiki_pages;
+DROP TABLE IF EXISTS kanban_tasks;
+DROP TABLE IF EXISTS kanban_buckets;
+DROP TABLE IF EXISTS kanban_boards;

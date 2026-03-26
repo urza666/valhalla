@@ -1,0 +1,27 @@
+DROP TRIGGER IF EXISTS update_channels_updated_at ON channels;
+DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
+DROP TRIGGER IF EXISTS update_guilds_updated_at ON guilds;
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+DROP FUNCTION IF EXISTS update_updated_at_column();
+
+DROP TABLE IF EXISTS pinned_messages;
+DROP TABLE IF EXISTS read_states;
+DROP TABLE IF EXISTS webhooks;
+DROP TABLE IF EXISTS audit_log_entries;
+DROP TABLE IF EXISTS bans;
+DROP TABLE IF EXISTS invites;
+DROP TABLE IF EXISTS reactions;
+DROP TABLE IF EXISTS attachments;
+DROP TABLE IF EXISTS message_role_mentions;
+DROP TABLE IF EXISTS message_mentions;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS dm_participants;
+DROP TABLE IF EXISTS channel_overwrites;
+DROP TABLE IF EXISTS channels;
+DROP TABLE IF EXISTS member_roles;
+DROP TABLE IF EXISTS members;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS guilds;
+DROP TABLE IF EXISTS relationships;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS users;

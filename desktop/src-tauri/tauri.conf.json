@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nickkadutskyi/jb-tauri-v2-conf-schema/refs/heads/v2/schema.json",
+  "productName": "Valhalla",
+  "version": "0.1.0",
+  "identifier": "com.valhalla.desktop",
+  "build": {
+    "frontendDist": "../../web/dist",
+    "devUrl": "http://localhost:3000",
+    "beforeDevCommand": "cd ../../web && npm run dev",
+    "beforeBuildCommand": "cd ../../web && npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Valhalla",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 940,
+        "minHeight": 500,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/icon.png",
+      "iconAsTemplate": true,
+      "tooltip": "Valhalla"
+    },
+    "security": {
+      "csp": "default-src 'self'; connect-src 'self' ws://localhost:* wss://* http://localhost:* https://*; img-src 'self' https://* data:; media-src 'self' https://*; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": []
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["valhalla"]
+      }
+    }
+  }
+}
