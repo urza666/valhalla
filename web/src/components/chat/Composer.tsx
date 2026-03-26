@@ -23,7 +23,10 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
     if (!text || sending) return;
     setSending(true);
     try {
-      await api.sendMessage(channelId, text, replyToId);
+      const msg = await api.sendMessage(channelId, text, replyToId);
+      // Optimistic UI: add message to store immediately
+      const { addMessage } = (await import('../../stores/app')).useAppStore.getState();
+      addMessage(msg);
       setInput('');
       if (onReplySent) onReplySent();
       // Reset textarea height

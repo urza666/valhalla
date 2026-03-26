@@ -1,0 +1,65 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic "Freunde & DMs" [ref=e5] [cursor=pointer]: 💬
+    - generic "E2E Test Server" [ref=e7] [cursor=pointer]: ET
+    - generic "Server erstellen" [ref=e8] [cursor=pointer]: +
+    - generic "Server beitreten" [ref=e9] [cursor=pointer]: ↓
+  - generic [ref=e10]:
+    - generic [ref=e11] [cursor=pointer]:
+      - generic [ref=e12]: E2E Test Server
+      - generic [ref=e13]: ⚙
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: Text Channels
+        - generic [ref=e17] [cursor=pointer]:
+          - generic [ref=e18]: "#"
+          - text: general
+      - generic [ref=e19]:
+        - generic [ref=e20]: Voice Channels
+        - generic [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: 🔊
+          - text: General
+        - button "Join Voice" [ref=e25] [cursor=pointer]
+    - generic [ref=e26]:
+      - generic [ref=e27]: E
+      - generic [ref=e28] [cursor=pointer]:
+        - generic [ref=e29]: e2e_1774514102462
+        - generic [ref=e30]: Online
+      - button "⚙" [ref=e31] [cursor=pointer]
+  - generic [ref=e33]:
+    - generic [ref=e34]:
+      - generic [ref=e35]: "#"
+      - text: general
+      - generic [ref=e36]:
+        - button "Chat" [ref=e37] [cursor=pointer]
+        - button "📋 Board" [ref=e38] [cursor=pointer]
+        - button "📖 Wiki" [ref=e39] [cursor=pointer]
+    - generic [ref=e40]:
+      - generic [ref=e42]:
+        - generic [ref=e43]: E
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - generic [ref=e46]: e2e_1774514102462
+            - generic [ref=e47]: 09:35 AM
+          - generic [ref=e48]: Hello E2E Test!
+      - generic [ref=e53]:
+        - strong [ref=e54]: bold
+        - text: and
+        - emphasis [ref=e55]: italic
+    - generic [ref=e57]:
+      - button "😀" [ref=e58] [cursor=pointer]
+      - button "GIF" [ref=e59] [cursor=pointer]
+      - generic "Datei hochladen" [ref=e60] [cursor=pointer]: 📎
+      - 'textbox "Nachricht an #general" [active] [ref=e61]'
+      - button "➤" [disabled] [ref=e62]
+  - generic [ref=e63]:
+    - generic [ref=e64]: Online — 1
+    - generic [ref=e65] [cursor=pointer]:
+      - generic [ref=e66]:
+        - generic [ref=e67]: E
+        - generic "Online" [ref=e68]
+      - generic [ref=e69]: e2e_1774514102462
+```

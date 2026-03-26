@@ -77,6 +77,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => {
       const newMessages = new Map(state.messages);
       const channelMsgs = newMessages.get(message.channel_id) || [];
+      // Deduplicate: don't add if already exists (optimistic UI + WS event)
+      if (channelMsgs.some((m) => m.id === message.id)) return state;
       newMessages.set(message.channel_id, [...channelMsgs, message]);
       return { messages: newMessages };
     });
