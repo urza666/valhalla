@@ -77,10 +77,18 @@ export function MessageActions({ message, channelId, onReply, onEdit, children }
       {/* Hover action bar (top right of message) */}
       {(showHover || showReactionPicker) && (
         <div className="msg-action-bar">
-          <button onClick={() => onReply(message)} title="Antworten">↩️</button>
-          <button onClick={(e) => { e.stopPropagation(); setShowReactionPicker(!showReactionPicker); }} title="Reaktion">😀</button>
-          {isAuthor && <button onClick={() => onEdit(message)} title="Bearbeiten">✏️</button>}
-          <button onClick={(e) => ctx.show(e as any, menuItems)} title="Mehr">⋯</button>
+          <button onClick={() => onReply(message)} title="Antworten">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 00-4-4H4"/></svg>
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); setShowReactionPicker(!showReactionPicker); }} title="Reaktion">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+          </button>
+          {isAuthor && <button onClick={() => onEdit(message)} title="Bearbeiten">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>}
+          <button onClick={(e) => ctx.show(e as any, menuItems)} title="Mehr">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg>
+          </button>
         </div>
       )}
 

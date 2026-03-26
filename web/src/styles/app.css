@@ -603,6 +603,82 @@ select:focus-visible {
   color: var(--text-muted);
 }
 
+.user-panel-buttons {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.user-panel-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+
+.user-panel-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.user-panel-btn svg {
+  flex-shrink: 0;
+}
+
+/* Voice bar SVG icons */
+.voice-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.voice-btn:hover {
+  color: var(--text-primary);
+}
+
+.voice-btn.active {
+  color: var(--text-primary);
+}
+
+.voice-btn.muted {
+  color: var(--danger);
+}
+
+.voice-btn.muted:hover {
+  color: #ff6b6b;
+}
+
+.voice-btn.streaming {
+  color: var(--status-online);
+}
+
+.voice-btn.disconnect {
+  color: var(--danger);
+}
+
+.voice-btn.disconnect:hover {
+  color: #ff6b6b;
+  background: rgba(242, 63, 67, 0.15);
+}
+
+.voice-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.voice-btn svg {
+  flex-shrink: 0;
+}
+
 /* Auth form */
 .auth-container {
   display: flex;
@@ -728,12 +804,21 @@ select:focus-visible {
   background: none;
   cursor: pointer;
   font-size: 14px;
+  color: var(--text-muted);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: color 0.1s, background 0.1s;
 }
 
-.msg-action-bar button:hover { background: var(--interactive-active); }
+.msg-action-bar button:hover {
+  background: var(--interactive-active);
+  color: var(--text-primary);
+}
+
+.msg-action-bar button svg {
+  flex-shrink: 0;
+}
 
 .message.editing { background: rgba(88,101,242,0.06); }
 
