@@ -209,32 +209,86 @@ function SessionsTab() {
 }
 
 function AppearanceTab() {
-  const [fontSize, setFontSize] = useState(16);
+  const settings = (() => {
+    return {
+      theme: localStorage.getItem('theme') || 'dark',
+      fontSize: Number(localStorage.getItem('font_size')) || 16,
+      desktopNotifications: localStorage.getItem('notif_desktop') !== 'false',
+      notificationSound: localStorage.getItem('notif_sound') !== 'false',
+    };
+  })();
+
+  const [theme, setTheme] = useState(settings.theme);
+  const [fontSize, setFontSize] = useState(settings.fontSize);
+  const [desktopNotif, setDesktopNotif] = useState(settings.desktopNotifications);
+  const [notifSound, setNotifSound] = useState(settings.notificationSound);
+
+  const applyTheme = (t: string) => {
+    setTheme(t);
+    localStorage.setItem('theme', t);
+    document.documentElement.setAttribute('data-theme', t);
+  };
 
   return (
     <div>
       <h2>Darstellung</h2>
 
       <div className="form-group" style={{ marginTop: 20 }}>
+        <label>Theme</label>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <button
+            className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
+            onClick={() => applyTheme('dark')}
+            style={{ background: '#313338', color: '#f2f3f5', border: theme === 'dark' ? '2px solid var(--brand-primary)' : '2px solid var(--border-subtle)', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            🌙 Dark
+          </button>
+          <button
+            className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
+            onClick={() => applyTheme('light')}
+            style={{ background: '#ffffff', color: '#060607', border: theme === 'light' ? '2px solid var(--brand-primary)' : '2px solid #e1e1e4', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            ☀️ Light
+          </button>
+        </div>
+      </div>
+
+      <div className="form-group">
         <label>Schriftgroesse: {fontSize}px</label>
         <input
-          type="range"
-          min={12}
-          max={20}
-          value={fontSize}
+          type="range" min={12} max={20} value={fontSize}
           onChange={(e) => {
             const size = Number(e.target.value);
             setFontSize(size);
+            localStorage.setItem('font_size', String(size));
             document.documentElement.style.fontSize = size + 'px';
           }}
           style={{ width: '100%' }}
         />
       </div>
 
-      <div className="form-group">
-        <label>Theme</label>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Dark Mode (Standard) — weitere Themes in Planung</p>
-      </div>
+      <div className="settings-tab-sep" style={{ margin: '24px 0' }} />
+
+      <h3 style={{ fontSize: 16, marginBottom: 16 }}>Benachrichtigungen</h3>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', fontSize: 14, color: 'var(--text-secondary)' }}>
+        <input type="checkbox" checked={desktopNotif} onChange={() => {
+          const next = !desktopNotif;
+          setDesktopNotif(next);
+          localStorage.setItem('notif_desktop', String(next));
+          if (next && 'Notification' in window) Notification.requestPermission();
+        }} />
+        Desktop-Benachrichtigungen
+      </label>
+
+      <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', cursor: 'pointer', fontSize: 14, color: 'var(--text-secondary)' }}>
+        <input type="checkbox" checked={notifSound} onChange={() => {
+          const next = !notifSound;
+          setNotifSound(next);
+          localStorage.setItem('notif_sound', String(next));
+        }} />
+        Benachrichtigungston
+      </label>
     </div>
   );
 }

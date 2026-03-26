@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { api } from '../../api/client';
 import { EmojiPicker } from './EmojiPicker';
+import { GifPicker } from './GifPicker';
 
 interface Props {
   channelId: string;
@@ -14,6 +15,7 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
+  const [showGif, setShowGif] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = useCallback(async () => {
@@ -68,15 +70,38 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
         />
       )}
 
+      {/* GIF picker */}
+      {showGif && (
+        <GifPicker
+          onSelect={(url) => {
+            // Send GIF URL as message
+            api.sendMessage(channelId, url, replyToId);
+            if (onReplySent) onReplySent();
+          }}
+          onClose={() => setShowGif(false)}
+        />
+      )}
+
       <div className="composer">
         {/* Emoji toggle */}
         <button
           className="composer-action"
-          onClick={() => setShowEmoji(!showEmoji)}
+          onClick={() => { setShowEmoji(!showEmoji); setShowGif(false); }}
           title="Emoji"
           type="button"
         >
           😀
+        </button>
+
+        {/* GIF toggle */}
+        <button
+          className="composer-action"
+          onClick={() => { setShowGif(!showGif); setShowEmoji(false); }}
+          title="GIF"
+          type="button"
+          style={{ fontSize: 12, fontWeight: 700 }}
+        >
+          GIF
         </button>
 
         {/* File upload */}

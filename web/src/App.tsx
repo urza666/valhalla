@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useAuthStore } from './stores/auth';
 import { useAppStore } from './stores/app';
+import { useSettingsStore } from './stores/settings';
 import { AuthPage } from './components/layout/AuthPage';
 import { AppLayout } from './components/layout/AppLayout';
 import type { Message } from './api/client';
@@ -8,6 +9,7 @@ import type { Message } from './api/client';
 export function App() {
   const { user, gateway, isLoading, restore } = useAuthStore();
   const { addMessage, updateMessage, removeMessage } = useAppStore();
+  const { sendNotification } = useSettingsStore();
 
   // Restore session on mount
   useEffect(() => {
@@ -20,7 +22,15 @@ export function App() {
 
     const unsubs = [
       gateway.on('MESSAGE_CREATE', (data) => {
-        addMessage(data as Message);
+        const msg = data as Message;
+        addMessage(msg);
+        // Desktop notification for messages from others
+        if (msg.author.id !== user?.id) {
+          sendNotification(
+            msg.author.display_name || msg.author.username,
+            msg.content.length > 100 ? msg.content.slice(0, 100) + '...' : msg.content
+          );
+        }
       }),
       gateway.on('MESSAGE_UPDATE', (data) => {
         updateMessage(data as Message);
