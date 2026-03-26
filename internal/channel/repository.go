@@ -89,11 +89,13 @@ func (r *Repository) Update(ctx context.Context, id int64, req UpdateChannelRequ
 			position = COALESCE($4, position),
 			parent_id = COALESCE($5, parent_id),
 			nsfw = COALESCE($6, nsfw),
-			rate_limit_per_user = COALESCE($7, rate_limit_per_user)
+			rate_limit_per_user = COALESCE($7, rate_limit_per_user),
+			bitrate = COALESCE($8, bitrate),
+			user_limit = COALESCE($9, user_limit)
 		WHERE id = $1
 		RETURNING id, guild_id, type, name, topic, position, parent_id, nsfw,
 		          rate_limit_per_user, bitrate, user_limit, last_message_id, created_at
-	`, id, req.Name, req.Topic, req.Position, req.ParentID, req.NSFW, req.RateLimitPerUser).Scan(
+	`, id, req.Name, req.Topic, req.Position, req.ParentID, req.NSFW, req.RateLimitPerUser, req.Bitrate, req.UserLimit).Scan(
 		&ch.ID, &ch.GuildID, &ch.Type, &ch.Name, &ch.Topic, &ch.Position,
 		&ch.ParentID, &ch.NSFW, &ch.RateLimitPerUser, &ch.Bitrate,
 		&ch.UserLimit, &ch.LastMessageID, &ch.CreatedAt,

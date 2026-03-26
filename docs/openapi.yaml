@@ -1,0 +1,516 @@
+openapi: 3.0.3
+info:
+  title: Valhalla API
+  description: REST API for the Valhalla communication platform
+  version: 1.0.0
+  license:
+    name: AGPL-3.0
+servers:
+  - url: /api/v1
+    description: API v1
+
+tags:
+  - name: Auth
+    description: Authentication and session management
+  - name: Users
+    description: User profiles and settings
+  - name: Guilds
+    description: Server/guild management
+  - name: Channels
+    description: Channel operations
+  - name: Messages
+    description: Messaging and reactions
+  - name: Voice
+    description: Voice/video channels
+  - name: Relationships
+    description: Friends, blocks, requests
+  - name: Kanban
+    description: Kanban boards and tasks
+  - name: Wiki
+    description: Wiki pages
+  - name: Polls
+    description: Polls and voting
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string, minLength: 2, maxLength: 32 }
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8, maxLength: 128 }
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and invalidate session
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204': { description: Logged out }
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string }
+      responses:
+        '200': { description: Reset token generated (if account exists) }
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        '200': { description: Password reset successful }
+
+  /users/@me:
+    get:
+      tags: [Users]
+      summary: Get current user
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+    patch:
+      tags: [Users]
+      summary: Update profile
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string, nullable: true }
+                bio: { type: string, nullable: true, maxLength: 190 }
+      responses:
+        '200': { description: Profile updated }
+
+  /users/@me/guilds:
+    get:
+      tags: [Guilds]
+      summary: Get user's guilds
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Guild' }
+
+  /users/@me/password:
+    post:
+      tags: [Users]
+      summary: Change password
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        '204': { description: Password changed }
+
+  /users/@me/delete:
+    post:
+      tags: [Users]
+      summary: Delete account (GDPR Art. 17)
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password: { type: string }
+      responses:
+        '204': { description: Account deleted }
+
+  /users/@me/export:
+    get:
+      tags: [Users]
+      summary: Export all personal data (GDPR Art. 20)
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          description: JSON export of all user data
+          content:
+            application/json:
+              schema: { type: object }
+
+  /users/@me/sessions:
+    get:
+      tags: [Users]
+      summary: List active sessions
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Session' }
+    delete:
+      tags: [Users]
+      summary: Revoke all other sessions
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204': { description: Sessions revoked }
+
+  /users/@me/relationships:
+    get:
+      tags: [Relationships]
+      summary: Get friends, pending, blocked
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Relationship' }
+    post:
+      tags: [Relationships]
+      summary: Send friend request
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username: { type: string }
+      responses:
+        '204': { description: Request sent }
+
+  /guilds:
+    post:
+      tags: [Guilds]
+      summary: Create a new guild
+      security: [{ BearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 100 }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  guild: { $ref: '#/components/schemas/Guild' }
+                  roles: { type: array, items: { $ref: '#/components/schemas/Role' } }
+                  channels: { type: array, items: { $ref: '#/components/schemas/Channel' } }
+
+  /guilds/{guildId}/channels:
+    get:
+      tags: [Channels]
+      summary: Get guild channels
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Channel' }
+
+  /guilds/{guildId}/members:
+    get:
+      tags: [Guilds]
+      summary: Get guild members
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: guildId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Member' }
+
+  /channels/{channelId}/messages:
+    get:
+      tags: [Messages]
+      summary: Get channel messages
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: before
+          in: query
+          schema: { type: string }
+          description: Message ID cursor (for pagination)
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Message' }
+    post:
+      tags: [Messages]
+      summary: Send a message
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content: { type: string, maxLength: 4000 }
+                message_reference: { type: string, description: Reply-to message ID }
+                attachment_ids: { type: array, items: { type: string } }
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+
+  /channels/{channelId}/attachments:
+    post:
+      tags: [Messages]
+      summary: Upload a file attachment
+      security: [{ BearerAuth: [] }]
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
+
+  /channels/{channelId}/voice/join:
+    post:
+      tags: [Voice]
+      summary: Join a voice channel
+      security: [{ BearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  server:
+                    type: object
+                    properties:
+                      token: { type: string }
+                      endpoint: { type: string }
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: valhalla_session
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        username: { type: string }
+        display_name: { type: string, nullable: true }
+        email: { type: string }
+        avatar: { type: string, nullable: true }
+        bio: { type: string, nullable: true }
+        mfa_enabled: { type: boolean }
+        verified: { type: boolean }
+
+    Guild:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        icon: { type: string, nullable: true }
+        owner_id: { type: string }
+        member_count: { type: integer }
+
+    Channel:
+      type: object
+      properties:
+        id: { type: string }
+        guild_id: { type: string, nullable: true }
+        type: { type: integer, description: '0=text, 2=voice, 4=category' }
+        name: { type: string }
+        topic: { type: string, nullable: true }
+        position: { type: integer }
+        parent_id: { type: string, nullable: true }
+
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        channel_id: { type: string }
+        author:
+          type: object
+          properties:
+            id: { type: string }
+            username: { type: string }
+            display_name: { type: string, nullable: true }
+            avatar: { type: string, nullable: true }
+        content: { type: string }
+        timestamp: { type: string, format: date-time }
+        edited_timestamp: { type: string, format: date-time, nullable: true }
+        type: { type: integer }
+        pinned: { type: boolean }
+        reactions:
+          type: array
+          items:
+            type: object
+            properties:
+              emoji: { type: string }
+              count: { type: integer }
+              me: { type: boolean }
+        attachments:
+          type: array
+          items: { $ref: '#/components/schemas/Attachment' }
+
+    Attachment:
+      type: object
+      properties:
+        id: { type: string }
+        filename: { type: string }
+        content_type: { type: string }
+        size: { type: integer }
+        url: { type: string }
+        width: { type: integer, nullable: true }
+        height: { type: integer, nullable: true }
+
+    Member:
+      type: object
+      properties:
+        user_id: { type: string }
+        guild_id: { type: string }
+        nick: { type: string, nullable: true }
+        roles: { type: array, items: { type: string } }
+        joined_at: { type: string, format: date-time }
+
+    Role:
+      type: object
+      properties:
+        id: { type: string }
+        guild_id: { type: string }
+        name: { type: string }
+        color: { type: integer }
+        position: { type: integer }
+        permissions: { type: string }
+
+    Relationship:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: integer, description: '1=friend, 2=blocked, 3=pending_in, 4=pending_out' }
+        username: { type: string }
+        display_name: { type: string, nullable: true }
+
+    Session:
+      type: object
+      properties:
+        current: { type: boolean }
+        ip_address: { type: string }
+        created_at: { type: string }
+
+    TokenResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/User' }

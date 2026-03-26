@@ -32,6 +32,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set HttpOnly session cookie (7 days)
+	SetSessionCookie(w, resp.Token, 7*24*60*60)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(resp)
@@ -51,6 +54,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Set HttpOnly session cookie (7 days)
+	SetSessionCookie(w, resp.Token, 7*24*60*60)
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
 }
@@ -68,6 +74,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ClearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -31,6 +31,7 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/thread"
 	"github.com/valhalla-chat/valhalla/internal/voice"
 	"github.com/valhalla-chat/valhalla/internal/wiki"
+	"github.com/valhalla-chat/valhalla/pkg/metrics"
 	"github.com/valhalla-chat/valhalla/pkg/middleware"
 	"github.com/valhalla-chat/valhalla/pkg/snowflake"
 )
@@ -141,6 +142,10 @@ func main() {
 
 	// WebSocket endpoint (embedded gateway for MVP)
 	r.Get("/ws", gwServer.HandleWebSocket)
+
+	// Observability endpoints (no auth required)
+	r.Get("/metrics", metrics.Handler())
+	r.Get("/health", metrics.HealthHandler())
 
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {

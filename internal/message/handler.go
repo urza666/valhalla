@@ -16,6 +16,7 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/auth"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
 	"github.com/valhalla-chat/valhalla/pkg/events"
+	"github.com/valhalla-chat/valhalla/pkg/metrics"
 	"github.com/valhalla-chat/valhalla/pkg/snowflake"
 )
 
@@ -177,6 +178,8 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	if h.dispatcher != nil {
 		h.dispatcher.DispatchToChannel(guildID, channelID, events.EventMessageCreate, msg)
 	}
+
+	metrics.IncrMessages()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)

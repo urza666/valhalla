@@ -2,7 +2,11 @@ import { useVoiceStore } from '../../stores/voice';
 import { useAppStore } from '../../stores/app';
 
 export function VoiceConnectedBar() {
-  const { connected, channelId, guildId, selfMute, selfDeaf, leaveChannel, toggleMute, toggleDeaf } = useVoiceStore();
+  const {
+    connected, channelId, guildId,
+    selfMute, selfDeaf, selfVideo, selfStream,
+    leaveChannel, toggleMute, toggleDeaf, toggleVideo, toggleStream,
+  } = useVoiceStore();
 
   const { channels } = useAppStore();
 
@@ -27,21 +31,37 @@ export function VoiceConnectedBar() {
         <button
           className={`voice-btn ${selfMute ? 'active' : ''}`}
           onClick={toggleMute}
-          title={selfMute ? 'Unmute' : 'Mute'}
+          title={selfMute ? 'Mikrofon einschalten' : 'Mikrofon ausschalten'}
         >
           {selfMute ? '🔇' : '🎙️'}
         </button>
         <button
           className={`voice-btn ${selfDeaf ? 'active' : ''}`}
           onClick={toggleDeaf}
-          title={selfDeaf ? 'Undeafen' : 'Deafen'}
+          title={selfDeaf ? 'Audio einschalten' : 'Audio ausschalten'}
         >
           {selfDeaf ? '🔕' : '🔊'}
         </button>
         <button
+          className={`voice-btn ${selfVideo ? 'active' : ''}`}
+          onClick={toggleVideo}
+          title={selfVideo ? 'Kamera ausschalten' : 'Kamera einschalten'}
+        >
+          {selfVideo ? '📷' : '📷'}
+          {!selfVideo && <span className="voice-btn-off-line" />}
+        </button>
+        <button
+          className={`voice-btn ${selfStream ? 'active' : ''}`}
+          onClick={toggleStream}
+          title={selfStream ? 'Bildschirmfreigabe beenden' : 'Bildschirm teilen'}
+        >
+          🖥️
+          {!selfStream && <span className="voice-btn-off-line" />}
+        </button>
+        <button
           className="voice-btn disconnect"
           onClick={leaveChannel}
-          title="Disconnect"
+          title="Verbindung trennen"
         >
           📞
         </button>

@@ -24,6 +24,8 @@ class APIClient {
       'Content-Type': 'application/json',
     };
 
+    // Use Authorization header as fallback (for non-cookie contexts like bots)
+    // Browser requests rely on HttpOnly cookie via credentials: 'include'
     const token = this.getToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -32,6 +34,7 @@ class APIClient {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
       headers,
+      credentials: 'include', // Send HttpOnly cookies
       body: body ? JSON.stringify(body) : undefined,
     });
 
@@ -136,6 +139,7 @@ class APIClient {
     const res = await fetch(`${API_BASE}/channels/${channelId}/attachments`, {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
       body: formData,
     });
 
@@ -269,6 +273,51 @@ class APIClient {
   createInvite(channelId: string) {
     return this.request<{ code: string }>('POST', `/channels/${channelId}/invites`);
   }
+
+  // Channel settings
+  updateChannel(channelId: string, data: { name?: string; topic?: string; bitrate?: number; user_limit?: number; rate_limit_per_user?: number; nsfw?: boolean }) {
+    return this.request<Channel>('PATCH', `/channels/${channelId}`, data);
+  }
+
+  // Pins
+  getPins(channelId: string) {
+    return this.request<Message[]>('GET', `/channels/${channelId}/pins`);
+  }
+
+  pinMessage(channelId: string, messageId: string) {
+    return this.request<void>('PUT', `/channels/${channelId}/pins/${messageId}`);
+  }
+
+  unpinMessage(channelId: string, messageId: string) {
+    return this.request<void>('DELETE', `/channels/${channelId}/pins/${messageId}`);
+  }
+
+  // Ban
+  banUser(guildId: string, userId: string, reason?: string) {
+    return this.request<void>('PUT', `/guilds/${guildId}/bans/${userId}`, { reason });
+  }
+
+  // Block
+  blockUser(userId: string) {
+    return this.request<void>('PUT', `/users/@me/blocks/${userId}`);
+  }
+
+  // User profile
+  getUserProfile(userId: string) {
+    return this.request<{ id: string; username: string; display_name: string | null; avatar: string | null; bio: string | null }>('GET', `/users/${userId}/profile`);
+  }
+
+  // Polls
+  createPoll(channelId: string, question: string, options: string[], allowMultiselect: boolean, durationHours: number) {
+    return this.request<any>('POST', `/channels/${channelId}/polls`, {
+      question, options, allow_multiselect: allowMultiselect, duration_hours: durationHours,
+    });
+  }
+
+  // Voice state with video/stream
+  updateVoiceStateFull(state: { self_mute?: boolean; self_deaf?: boolean; self_video?: boolean; self_stream?: boolean }) {
+    return this.request<void>('PATCH', '/voice/state', state);
+  }
 }
 
 export interface Relationship {
@@ -335,6 +384,10 @@ export interface Channel {
   position: number;
   parent_id: string | null;
   last_message_id: string | null;
+  bitrate?: number;
+  user_limit?: number;
+  rate_limit_per_user?: number;
+  nsfw?: boolean;
 }
 
 export interface Message {

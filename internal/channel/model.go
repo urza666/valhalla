@@ -56,4 +56,6 @@ type UpdateChannelRequest struct {
 	ParentID         *int64  `json:"parent_id,string,omitempty"`
 	NSFW             *bool   `json:"nsfw,omitempty"`
 	RateLimitPerUser *int    `json:"rate_limit_per_user,omitempty"`
+	Bitrate          *int    `json:"bitrate,omitempty"`
+	UserLimit        *int    `json:"user_limit,omitempty"`
 }

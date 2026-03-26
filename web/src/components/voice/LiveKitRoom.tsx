@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Room,
   RoomEvent,
@@ -11,12 +11,14 @@ import { useVoiceStore } from '../../stores/voice';
 
 // LiveKitRoom handles the actual WebRTC connection via LiveKit.
 export function LiveKitRoom() {
-  const { connected, lkToken, lkEndpoint, selfMute } = useVoiceStore();
+  const {
+    connected, lkToken, lkEndpoint,
+    selfMute, selfVideo, selfStream,
+    audioInputDevice, videoInputDevice,
+  } = useVoiceStore();
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [screenShareTrack, setScreenShareTrack] = useState<RemoteTrackPublication | null>(null);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-  const [isCameraOn, setIsCameraOn] = useState(false);
 
   // Connect to LiveKit room when token is available
   useEffect(() => {
@@ -27,6 +29,10 @@ export function LiveKitRoom() {
       dynacast: true,
       videoCaptureDefaults: {
         resolution: VideoPresets.h720.resolution,
+        deviceId: videoInputDevice || undefined,
+      },
+      audioCaptureDefaults: {
+        deviceId: audioInputDevice !== 'default' ? audioInputDevice : undefined,
       },
     });
 
@@ -62,6 +68,8 @@ export function LiveKitRoom() {
     room.on(RoomEvent.TrackMuted, onParticipantChange);
     room.on(RoomEvent.TrackUnmuted, onParticipantChange);
     room.on(RoomEvent.ActiveSpeakersChanged, onParticipantChange);
+    room.on(RoomEvent.LocalTrackPublished, onParticipantChange);
+    room.on(RoomEvent.LocalTrackUnpublished, onParticipantChange);
 
     return () => {
       room.off(RoomEvent.ParticipantConnected, onParticipantChange);
@@ -71,6 +79,8 @@ export function LiveKitRoom() {
       room.off(RoomEvent.TrackMuted, onParticipantChange);
       room.off(RoomEvent.TrackUnmuted, onParticipantChange);
       room.off(RoomEvent.ActiveSpeakersChanged, onParticipantChange);
+      room.off(RoomEvent.LocalTrackPublished, onParticipantChange);
+      room.off(RoomEvent.LocalTrackUnpublished, onParticipantChange);
     };
   }, [room]);
 
@@ -79,6 +89,18 @@ export function LiveKitRoom() {
     if (!room?.localParticipant) return;
     room.localParticipant.setMicrophoneEnabled(!selfMute);
   }, [room, selfMute]);
+
+  // Sync camera state to LiveKit
+  useEffect(() => {
+    if (!room?.localParticipant) return;
+    room.localParticipant.setCameraEnabled(selfVideo);
+  }, [room, selfVideo]);
+
+  // Sync screen share state to LiveKit
+  useEffect(() => {
+    if (!room?.localParticipant) return;
+    room.localParticipant.setScreenShareEnabled(selfStream);
+  }, [room, selfStream]);
 
   // Update participants list
   const updateParticipants = (r: Room) => {
@@ -97,30 +119,6 @@ export function LiveKitRoom() {
     setScreenShareTrack(foundScreen);
   };
 
-  // Toggle camera
-  const toggleCamera = useCallback(async () => {
-    if (!room) return;
-    if (isCameraOn) {
-      room.localParticipant.setCameraEnabled(false);
-      setIsCameraOn(false);
-    } else {
-      room.localParticipant.setCameraEnabled(true);
-      setIsCameraOn(true);
-    }
-  }, [room, isCameraOn]);
-
-  // Toggle screen share
-  const toggleScreenShare = useCallback(async () => {
-    if (!room) return;
-    if (isScreenSharing) {
-      room.localParticipant.setScreenShareEnabled(false);
-      setIsScreenSharing(false);
-    } else {
-      room.localParticipant.setScreenShareEnabled(true);
-      setIsScreenSharing(true);
-    }
-  }, [room, isScreenSharing]);
-
   if (!connected || !room) return null;
 
   const hasVideo = participants.some((p) =>
@@ -129,9 +127,7 @@ export function LiveKitRoom() {
     )
   );
 
-  // Only show video panel if someone has video/screenshare active
-  if (!hasVideo) return null;
-
+  // Show at minimum a connected indicator with participant list, video when available
   return (
     <div className="lk-room">
       {/* Screen share takes priority view */}
@@ -141,24 +137,31 @@ export function LiveKitRoom() {
         </div>
       )}
 
-      {/* Video grid */}
-      <div className={`lk-grid ${screenShareTrack ? 'with-screenshare' : ''}`}>
-        {participants.map((p) => (
-          <ParticipantTile key={p.identity} participant={p} />
-        ))}
-      </div>
+      {/* Video grid - show when video/screen active */}
+      {hasVideo && (
+        <div className={`lk-grid ${screenShareTrack ? 'with-screenshare' : ''}`}>
+          {participants.map((p) => (
+            <ParticipantTile key={p.identity} participant={p} />
+          ))}
+        </div>
+      )}
 
-      {/* Media controls */}
-      <div className="lk-controls">
-        <button className={`lk-btn ${isCameraOn ? 'active' : ''}`} onClick={toggleCamera}>
-          {isCameraOn ? '📷' : '📷'}
-          <span>{isCameraOn ? 'Camera Off' : 'Camera On'}</span>
-        </button>
-        <button className={`lk-btn ${isScreenSharing ? 'active' : ''}`} onClick={toggleScreenShare}>
-          🖥️
-          <span>{isScreenSharing ? 'Stop Share' : 'Share Screen'}</span>
-        </button>
-      </div>
+      {/* Audio-only participant list when no video */}
+      {!hasVideo && participants.length > 0 && (
+        <div className="lk-audio-grid">
+          {participants.map((p) => (
+            <div key={p.identity} className={`lk-audio-tile ${p.isSpeaking ? 'speaking' : ''}`}>
+              <div className="lk-avatar">
+                {(p.name || p.identity || '?')[0].toUpperCase()}
+              </div>
+              <span className="lk-audio-name">
+                {p.name || p.identity}
+                {p.isMicrophoneEnabled === false && ' 🔇'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

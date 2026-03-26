@@ -7,6 +7,8 @@ interface VoiceState {
   user_id: string;
   self_mute: boolean;
   self_deaf: boolean;
+  self_video?: boolean;
+  self_stream?: boolean;
 }
 
 interface VoiceStore {
@@ -16,15 +18,31 @@ interface VoiceStore {
   guildId: string | null;
   selfMute: boolean;
   selfDeaf: boolean;
+  selfVideo: boolean;
+  selfStream: boolean;
   lkToken: string | null;
   lkEndpoint: string | null;
   channelVoiceStates: VoiceState[];
+
+  // Audio/Video device settings
+  audioInputDevice: string;
+  audioOutputDevice: string;
+  videoInputDevice: string;
+  inputVolume: number;
+  outputVolume: number;
 
   // Actions
   joinChannel: (guildId: string, channelId: string) => Promise<void>;
   leaveChannel: () => Promise<void>;
   toggleMute: () => Promise<void>;
   toggleDeaf: () => Promise<void>;
+  toggleVideo: () => Promise<void>;
+  toggleStream: () => Promise<void>;
+  setAudioInputDevice: (deviceId: string) => void;
+  setAudioOutputDevice: (deviceId: string) => void;
+  setVideoInputDevice: (deviceId: string) => void;
+  setInputVolume: (volume: number) => void;
+  setOutputVolume: (volume: number) => void;
   updateVoiceStates: (states: VoiceState[]) => void;
   handleVoiceStateUpdate: (state: VoiceState) => void;
 }
@@ -35,9 +53,18 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   guildId: null,
   selfMute: false,
   selfDeaf: false,
+  selfVideo: false,
+  selfStream: false,
   lkToken: null,
   lkEndpoint: null,
   channelVoiceStates: [],
+
+  // Load saved device preferences
+  audioInputDevice: localStorage.getItem('audio_input_device') || 'default',
+  audioOutputDevice: localStorage.getItem('audio_output_device') || 'default',
+  videoInputDevice: localStorage.getItem('video_input_device') || '',
+  inputVolume: Number(localStorage.getItem('input_volume')) || 100,
+  outputVolume: Number(localStorage.getItem('output_volume')) || 100,
 
   joinChannel: async (guildId, channelId) => {
     try {
@@ -49,6 +76,8 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
         guildId,
         selfMute: false,
         selfDeaf: false,
+        selfVideo: false,
+        selfStream: false,
         lkToken: data.server.token,
         lkEndpoint: data.server.endpoint,
       });
@@ -73,6 +102,8 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
       guildId: null,
       selfMute: false,
       selfDeaf: false,
+      selfVideo: false,
+      selfStream: false,
       lkToken: null,
       lkEndpoint: null,
       channelVoiceStates: [],
@@ -92,6 +123,43 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
       selfMute: newDeaf ? true : get().selfMute,
     });
     api.updateVoiceState({ self_deaf: newDeaf }).catch(() => {});
+  },
+
+  toggleVideo: async () => {
+    const newVideo = !get().selfVideo;
+    set({ selfVideo: newVideo });
+    api.updateVoiceStateFull({ self_video: newVideo }).catch(() => {});
+  },
+
+  toggleStream: async () => {
+    const newStream = !get().selfStream;
+    set({ selfStream: newStream });
+    api.updateVoiceStateFull({ self_stream: newStream }).catch(() => {});
+  },
+
+  setAudioInputDevice: (deviceId) => {
+    localStorage.setItem('audio_input_device', deviceId);
+    set({ audioInputDevice: deviceId });
+  },
+
+  setAudioOutputDevice: (deviceId) => {
+    localStorage.setItem('audio_output_device', deviceId);
+    set({ audioOutputDevice: deviceId });
+  },
+
+  setVideoInputDevice: (deviceId) => {
+    localStorage.setItem('video_input_device', deviceId);
+    set({ videoInputDevice: deviceId });
+  },
+
+  setInputVolume: (volume) => {
+    localStorage.setItem('input_volume', String(volume));
+    set({ inputVolume: volume });
+  },
+
+  setOutputVolume: (volume) => {
+    localStorage.setItem('output_volume', String(volume));
+    set({ outputVolume: volume });
   },
 
   updateVoiceStates: (states) => {
