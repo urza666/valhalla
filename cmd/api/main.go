@@ -19,6 +19,8 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/auth"
 	"github.com/valhalla-chat/valhalla/internal/channel"
 	"github.com/valhalla-chat/valhalla/internal/config"
+	"github.com/valhalla-chat/valhalla/internal/eventbus"
+	"github.com/valhalla-chat/valhalla/pkg/events"
 	"github.com/valhalla-chat/valhalla/internal/dm"
 	"github.com/valhalla-chat/valhalla/internal/gateway"
 	"github.com/valhalla-chat/valhalla/internal/guild"
@@ -76,6 +78,23 @@ func main() {
 	gwServer := gateway.NewServer(ctx, authService, idGen, resumeURL)
 	go gwServer.StartHeartbeatChecker()
 
+	// NATS event bus — enables horizontal scaling of API + Gateway
+	var dispatcher events.EventDispatcher = gwServer // Default: local-only dispatch
+	natsConn, natsErr := eventbus.GetConnection(cfg.NatsURL)
+	if natsErr != nil {
+		log.Warn().Err(natsErr).Msg("NATS not available, using local-only event dispatch")
+	} else {
+		defer natsConn.Close()
+		// Handlers publish to NATS, Gateway subscribes from NATS
+		dispatcher = eventbus.NewCompositeDispatcher(natsConn, gwServer)
+		sub := eventbus.NewNATSSubscriber(natsConn, gwServer)
+		if err := sub.SubscribeAll(); err != nil {
+			log.Error().Err(err).Msg("Failed to subscribe to NATS events")
+		} else {
+			defer sub.Close()
+		}
+	}
+
 	// Domain services
 	guildRepo := guild.NewRepository(dbPool)
 	guildService := guild.NewService(guildRepo, idGen)
@@ -85,7 +104,7 @@ func main() {
 	channelHandler := channel.NewHandler(channelRepo, idGen)
 
 	messageRepo := message.NewRepository(dbPool)
-	messageHandler := message.NewHandler(messageRepo, idGen, gwServer)
+	messageHandler := message.NewHandler(messageRepo, idGen, dispatcher)
 
 	userService := user.NewService(dbPool)
 	userHandler := user.NewHandler(userService)

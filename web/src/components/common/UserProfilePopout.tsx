@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { api } from '../../api/client';
+import { useAppStore } from '../../stores/app';
+import { toast } from '../../stores/toast';
 
 interface Props {
   userId: string;
@@ -11,12 +14,7 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
   const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`/api/v1/users/${userId}/profile`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    })
-      .then((r) => r.json())
-      .then(setProfile)
-      .catch(() => {});
+    api.getUserProfile(userId).then(setProfile).catch(() => {});
   }, [userId]);
 
   useEffect(() => {
@@ -36,7 +34,28 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
   if (!profile) return null;
 
   const adjustedX = Math.min(x, window.innerWidth - 320);
-  const adjustedY = Math.min(y, window.innerHeight - 300);
+  const adjustedY = Math.min(y, window.innerHeight - 350);
+
+  const openDM = async () => {
+    try {
+      const channel = await api.createDM(userId);
+      const { selectChannel } = useAppStore.getState();
+      selectChannel(channel.id);
+      toast.success('DM-Kanal geöffnet');
+      onClose();
+    } catch {
+      toast.error('DM konnte nicht erstellt werden');
+    }
+  };
+
+  const sendFriend = async () => {
+    try {
+      await api.sendFriendRequest(profile.username);
+      toast.success('Freundschaftsanfrage gesendet');
+    } catch {
+      toast.error('Anfrage konnte nicht gesendet werden');
+    }
+  };
 
   return (
     <div
@@ -59,23 +78,26 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
 
         {profile.bio && (
           <div className="user-popout-section">
-            <div className="user-popout-section-title">Ueber mich</div>
+            <div className="user-popout-section-title">Über mich</div>
             <div className="user-popout-bio">{profile.bio}</div>
           </div>
         )}
 
         <div className="user-popout-actions">
-          <button className="btn" style={{ width: '100%', fontSize: 14, padding: '8px 12px' }} onClick={async () => {
-            try {
-              await fetch('/api/v1/users/@me/channels', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-                body: JSON.stringify({ recipient_id: userId }),
-              });
-              onClose();
-            } catch { /* ignore */ }
-          }}>
+          <button
+            className="btn"
+            style={{ flex: 1, fontSize: 14, padding: '8px 12px' }}
+            onClick={openDM}
+          >
             Nachricht senden
+          </button>
+          <button
+            className="btn"
+            style={{ width: 'auto', fontSize: 14, padding: '8px 12px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+            onClick={sendFriend}
+            title="Freundschaftsanfrage senden"
+          >
+            ➕
           </button>
         </div>
       </div>

@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../../stores/auth';
+import { useVoiceStore } from '../../stores/voice';
 
 interface Props {
   onClose: () => void;
 }
 
 export function UserSettings({ onClose }: Props) {
-  const [tab, setTab] = useState<'profile' | 'account' | 'sessions' | 'appearance'>('profile');
+  const [tab, setTab] = useState<'profile' | 'account' | 'sessions' | 'appearance' | 'voice'>('profile');
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -18,6 +19,7 @@ export function UserSettings({ onClose }: Props) {
           <button className={`settings-tab ${tab === 'sessions' ? 'active' : ''}`} onClick={() => setTab('sessions')}>Sitzungen</button>
           <div className="settings-tab-sep" />
           <button className={`settings-tab ${tab === 'appearance' ? 'active' : ''}`} onClick={() => setTab('appearance')}>Darstellung</button>
+          <button className={`settings-tab ${tab === 'voice' ? 'active' : ''}`} onClick={() => setTab('voice')}>Sprache & Video</button>
           <div className="settings-tab-sep" />
           <button className="settings-tab danger" onClick={() => { useAuthStore.getState().logout(); onClose(); }}>Abmelden</button>
         </div>
@@ -27,6 +29,7 @@ export function UserSettings({ onClose }: Props) {
           {tab === 'account' && <AccountTab />}
           {tab === 'sessions' && <SessionsTab />}
           {tab === 'appearance' && <AppearanceTab />}
+          {tab === 'voice' && <VoiceVideoTab />}
         </div>
       </div>
     </div>
@@ -274,14 +277,14 @@ function AppearanceTab() {
             onClick={() => applyTheme('dark')}
             style={{ background: '#313338', color: '#f2f3f5', border: theme === 'dark' ? '2px solid var(--brand-primary)' : '2px solid var(--border-subtle)', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
           >
-            🌙 Dark
+            Dark
           </button>
           <button
             className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
             onClick={() => applyTheme('light')}
             style={{ background: '#ffffff', color: '#060607', border: theme === 'light' ? '2px solid var(--brand-primary)' : '2px solid #e1e1e4', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
           >
-            ☀️ Light
+            Light
           </button>
         </div>
       </div>
@@ -322,6 +325,273 @@ function AppearanceTab() {
         }} />
         Benachrichtigungston
       </label>
+    </div>
+  );
+}
+
+// Voice & Video settings tab with device selection and self-test
+function VoiceVideoTab() {
+  const {
+    audioInputDevice, audioOutputDevice, videoInputDevice,
+    inputVolume, outputVolume,
+    setAudioInputDevice, setAudioOutputDevice, setVideoInputDevice,
+    setInputVolume, setOutputVolume,
+  } = useVoiceStore();
+
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([]);
+  const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([]);
+  const [micLevel, setMicLevel] = useState(0);
+  const [testingMic, setTestingMic] = useState(false);
+  const [testingOutput, setTestingOutput] = useState(false);
+  const [cameraPreview, setCameraPreview] = useState(false);
+
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const animFrameRef = useRef<number>(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+
+  // Load available devices
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        // Request permission first so labels are populated
+        await navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(s => {
+          s.getTracks().forEach(t => t.stop());
+        }).catch(() => {});
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        setAudioInputs(devices.filter(d => d.kind === 'audioinput'));
+        setAudioOutputs(devices.filter(d => d.kind === 'audiooutput'));
+        setVideoInputs(devices.filter(d => d.kind === 'videoinput'));
+      } catch {
+        // Permission denied or no devices
+      }
+    };
+    loadDevices();
+
+    return () => {
+      stopMicTest();
+      stopCameraPreview();
+    };
+  }, []);
+
+  const startMicTest = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: audioInputDevice !== 'default' ? { exact: audioInputDevice } : undefined },
+      });
+      micStreamRef.current = stream;
+
+      const audioCtx = new AudioContext();
+      const source = audioCtx.createMediaStreamSource(stream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      source.connect(analyser);
+      analyserRef.current = analyser;
+
+      setTestingMic(true);
+
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
+      const updateLevel = () => {
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
+        setMicLevel(Math.min(100, Math.round((avg / 128) * 100)));
+        animFrameRef.current = requestAnimationFrame(updateLevel);
+      };
+      updateLevel();
+    } catch {
+      // Permission denied
+    }
+  }, [audioInputDevice]);
+
+  const stopMicTest = useCallback(() => {
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(t => t.stop());
+      micStreamRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+    analyserRef.current = null;
+    setTestingMic(false);
+    setMicLevel(0);
+  }, []);
+
+  const testOutputAudio = useCallback(() => {
+    setTestingOutput(true);
+    const audioCtx = new AudioContext();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    oscillator.frequency.value = 440;
+    gainNode.gain.value = 0.1 * (outputVolume / 100);
+    oscillator.start();
+    setTimeout(() => {
+      oscillator.stop();
+      audioCtx.close();
+      setTestingOutput(false);
+    }, 1000);
+  }, [outputVolume]);
+
+  const startCameraPreview = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: videoInputDevice ? { exact: videoInputDevice } : undefined },
+      });
+      cameraStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setCameraPreview(true);
+    } catch {
+      // Permission denied
+    }
+  }, [videoInputDevice]);
+
+  const stopCameraPreview = useCallback(() => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      cameraStreamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraPreview(false);
+  }, []);
+
+  return (
+    <div>
+      <h2>Sprache & Video</h2>
+
+      {/* Input device */}
+      <div className="form-group" style={{ marginTop: 20 }}>
+        <label>Eingabegerät (Mikrofon)</label>
+        <select
+          value={audioInputDevice}
+          onChange={(e) => setAudioInputDevice(e.target.value)}
+          style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 14 }}
+        >
+          <option value="default">Standard</option>
+          {audioInputs.map(d => (
+            <option key={d.deviceId} value={d.deviceId}>{d.label || `Mikrofon ${d.deviceId.slice(0, 8)}`}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Input volume */}
+      <div className="form-group">
+        <label>Eingangs-Lautstärke: {inputVolume}%</label>
+        <input type="range" min={0} max={200} value={inputVolume} onChange={(e) => setInputVolume(Number(e.target.value))} style={{ width: '100%' }} />
+      </div>
+
+      {/* Mic test */}
+      <div className="form-group">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button
+            className="btn"
+            style={{ width: 'auto', fontSize: 13, padding: '6px 16px' }}
+            onClick={testingMic ? stopMicTest : startMicTest}
+          >
+            {testingMic ? 'Test beenden' : 'Mikrofontest starten'}
+          </button>
+          {testingMic && (
+            <div style={{ flex: 1, height: 8, background: 'var(--bg-tertiary)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{
+                width: `${micLevel}%`, height: '100%',
+                background: micLevel > 70 ? 'var(--danger)' : micLevel > 30 ? 'var(--status-idle)' : 'var(--status-online)',
+                transition: 'width 50ms',
+                borderRadius: 4,
+              }} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="settings-tab-sep" style={{ margin: '24px 0' }} />
+
+      {/* Output device */}
+      <div className="form-group">
+        <label>Ausgabegerät (Lautsprecher/Kopfhörer)</label>
+        <select
+          value={audioOutputDevice}
+          onChange={(e) => setAudioOutputDevice(e.target.value)}
+          style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 14 }}
+        >
+          <option value="default">Standard</option>
+          {audioOutputs.map(d => (
+            <option key={d.deviceId} value={d.deviceId}>{d.label || `Lautsprecher ${d.deviceId.slice(0, 8)}`}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Output volume */}
+      <div className="form-group">
+        <label>Ausgangs-Lautstärke: {outputVolume}%</label>
+        <input type="range" min={0} max={200} value={outputVolume} onChange={(e) => setOutputVolume(Number(e.target.value))} style={{ width: '100%' }} />
+      </div>
+
+      {/* Output test */}
+      <div className="form-group">
+        <button
+          className="btn"
+          style={{ width: 'auto', fontSize: 13, padding: '6px 16px' }}
+          onClick={testOutputAudio}
+          disabled={testingOutput}
+        >
+          {testingOutput ? 'Wird abgespielt...' : 'Audiotest abspielen'}
+        </button>
+      </div>
+
+      <div className="settings-tab-sep" style={{ margin: '24px 0' }} />
+
+      {/* Video device */}
+      <h3 style={{ fontSize: 16, marginBottom: 16 }}>Kamera</h3>
+
+      <div className="form-group">
+        <label>Kamera</label>
+        <select
+          value={videoInputDevice}
+          onChange={(e) => {
+            setVideoInputDevice(e.target.value);
+            if (cameraPreview) {
+              stopCameraPreview();
+              setTimeout(() => startCameraPreview(), 100);
+            }
+          }}
+          style={{ width: '100%', padding: '10px 12px', border: 'none', borderRadius: 4, background: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 14 }}
+        >
+          <option value="">Standard</option>
+          {videoInputs.map(d => (
+            <option key={d.deviceId} value={d.deviceId}>{d.label || `Kamera ${d.deviceId.slice(0, 8)}`}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Camera preview */}
+      <div className="form-group">
+        <button
+          className="btn"
+          style={{ width: 'auto', fontSize: 13, padding: '6px 16px', marginBottom: 12 }}
+          onClick={cameraPreview ? stopCameraPreview : startCameraPreview}
+        >
+          {cameraPreview ? 'Vorschau beenden' : 'Kameravorschau'}
+        </button>
+
+        {cameraPreview && (
+          <div style={{ borderRadius: 8, overflow: 'hidden', background: '#000', maxWidth: 400 }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ width: '100%', display: 'block', transform: 'scaleX(-1)' }}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

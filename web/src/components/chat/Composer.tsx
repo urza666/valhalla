@@ -1,7 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 import { api } from '../../api/client';
+import { useAppStore } from '../../stores/app';
 import { EmojiPicker } from './EmojiPicker';
 import { GifPicker } from './GifPicker';
+import { CreatePollDialog } from '../poll/PollCard';
 import { toast } from '../../stores/toast';
 import type { Attachment } from '../../api/client';
 
@@ -12,6 +14,28 @@ interface PendingFile {
   attachmentId?: string;
   error?: string;
 }
+
+// Slash command definitions
+interface SlashCommand {
+  name: string;
+  description: string;
+  usage?: string;
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  { name: 'poll', description: 'Umfrage erstellen', usage: '/poll' },
+  { name: 'flip', description: 'Münze werfen (Kopf oder Zahl)', usage: '/flip' },
+  { name: 'roll', description: 'Zufallszahl (1-99)', usage: '/roll oder /roll 20' },
+  { name: 'shrug', description: '¯\\_(ツ)_/¯ einfügen', usage: '/shrug [Nachricht]' },
+  { name: 'tableflip', description: '(╯°□°)╯︵ ┻━┻ einfügen', usage: '/tableflip [Nachricht]' },
+  { name: 'unflip', description: '┬─┬ ノ( ゜-゜ノ) einfügen', usage: '/unflip [Nachricht]' },
+  { name: 'lenny', description: '( ͡° ͜ʖ ͡°) einfügen', usage: '/lenny [Nachricht]' },
+  { name: 'me', description: 'Aktion-Nachricht (*kursiv*)', usage: '/me [Aktion]' },
+  { name: 'spoiler', description: 'Spoiler-Nachricht', usage: '/spoiler [Nachricht]' },
+  { name: 'nick', description: 'Spitznamen ändern', usage: '/nick [Name]' },
+  { name: 'clear', description: 'Chat-Eingabe leeren', usage: '/clear' },
+  { name: 'giphy', description: 'GIF suchen', usage: '/giphy [Suchbegriff]' },
+];
 
 interface Props {
   channelId: string;
@@ -26,6 +50,10 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [showGif, setShowGif] = useState(false);
+  const [showPoll, setShowPoll] = useState(false);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashFilter, setSlashFilter] = useState('');
+  const [selectedSlashIndex, setSelectedSlashIndex] = useState(0);
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -49,10 +77,114 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
     setPendingFiles((prev) => prev.filter((f) => f.name !== name));
   };
 
+  // Execute a slash command
+  const executeSlashCommand = useCallback(async (commandText: string): Promise<boolean> => {
+    const parts = commandText.trim().split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const args = parts.slice(1).join(' ');
+
+    switch (cmd) {
+      case '/flip': {
+        const result = Math.random() < 0.5 ? 'Kopf' : 'Zahl';
+        await api.sendMessage(channelId, `🪙 **Münzwurf:** ${result}!`, replyToId);
+        return true;
+      }
+
+      case '/roll': {
+        const max = parseInt(args) || 99;
+        const result = Math.floor(Math.random() * max) + 1;
+        await api.sendMessage(channelId, `🎲 **Würfel (1-${max}):** ${result}`, replyToId);
+        return true;
+      }
+
+      case '/shrug': {
+        const text = args ? `${args} ¯\\_(ツ)_/¯` : '¯\\_(ツ)_/¯';
+        await api.sendMessage(channelId, text, replyToId);
+        return true;
+      }
+
+      case '/tableflip': {
+        const text = args ? `${args} (╯°□°)╯︵ ┻━┻` : '(╯°□°)╯︵ ┻━┻';
+        await api.sendMessage(channelId, text, replyToId);
+        return true;
+      }
+
+      case '/unflip': {
+        const text = args ? `${args} ┬─┬ ノ( ゜-゜ノ)` : '┬─┬ ノ( ゜-゜ノ)';
+        await api.sendMessage(channelId, text, replyToId);
+        return true;
+      }
+
+      case '/lenny': {
+        const text = args ? `${args} ( ͡° ͜ʖ ͡°)` : '( ͡° ͜ʖ ͡°)';
+        await api.sendMessage(channelId, text, replyToId);
+        return true;
+      }
+
+      case '/me': {
+        if (!args) { toast.error('/me erwartet eine Aktion'); return false; }
+        await api.sendMessage(channelId, `*${args}*`, replyToId);
+        return true;
+      }
+
+      case '/spoiler': {
+        if (!args) { toast.error('/spoiler erwartet einen Text'); return false; }
+        await api.sendMessage(channelId, `||${args}||`, replyToId);
+        return true;
+      }
+
+      case '/nick': {
+        // Would need a PATCH to member endpoint - for now just show info
+        toast.info(`Spitzname "${args}" — Funktion kommt bald`);
+        return true;
+      }
+
+      case '/clear': {
+        setInput('');
+        return true;
+      }
+
+      case '/poll': {
+        setShowPoll(true);
+        return true;
+      }
+
+      case '/giphy': {
+        setShowGif(true);
+        return true;
+      }
+
+      default:
+        return false;
+    }
+  }, [channelId, replyToId]);
+
   const handleSend = useCallback(async () => {
     const text = input.trim();
     const readyAttachments = pendingFiles.filter((f) => f.attachmentId && !f.error);
     if ((!text && readyAttachments.length === 0) || sending) return;
+
+    // Check for slash commands
+    if (text.startsWith('/')) {
+      setSending(true);
+      try {
+        const handled = await executeSlashCommand(text);
+        if (handled) {
+          setInput('');
+          setPendingFiles([]);
+          if (onReplySent) onReplySent();
+          if (textareaRef.current) textareaRef.current.style.height = 'auto';
+          setShowSlashMenu(false);
+        } else {
+          toast.error(`Unbekannter Befehl: ${text.split(/\s/)[0]}`);
+        }
+      } catch {
+        toast.error('Befehl fehlgeschlagen');
+      }
+      setSending(false);
+      return;
+    }
+
     setSending(true);
     try {
       let msg;
@@ -62,8 +194,7 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
       } else {
         msg = await api.sendMessage(channelId, text, replyToId);
       }
-      const { addMessage } = (await import('../../stores/app')).useAppStore.getState();
-      addMessage(msg);
+      useAppStore.getState().addMessage(msg);
       setInput('');
       setPendingFiles([]);
       if (onReplySent) onReplySent();
@@ -75,18 +206,62 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
     } finally {
       setSending(false);
     }
-  }, [channelId, input, sending, pendingFiles]);
+  }, [channelId, input, sending, pendingFiles, executeSlashCommand]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Slash command menu navigation
+    if (showSlashMenu) {
+      const filtered = getFilteredCommands();
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSlashIndex((prev) => Math.min(prev + 1, filtered.length - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSlashIndex((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+      if (e.key === 'Tab' || (e.key === 'Enter' && filtered.length > 0 && input.length <= slashFilter.length + 1)) {
+        e.preventDefault();
+        const cmd = filtered[selectedSlashIndex];
+        if (cmd) {
+          setInput(`/${cmd.name} `);
+          setShowSlashMenu(false);
+        }
+        return;
+      }
+      if (e.key === 'Escape') {
+        setShowSlashMenu(false);
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
     }
   };
 
+  const getFilteredCommands = () => {
+    if (!slashFilter) return SLASH_COMMANDS;
+    return SLASH_COMMANDS.filter(c => c.name.startsWith(slashFilter));
+  };
+
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
-    if (e.target.value.length > 0) onTyping();
+    const val = e.target.value;
+    setInput(val);
+    if (val.length > 0) onTyping();
+
+    // Show slash command menu when typing "/"
+    if (val.startsWith('/') && !val.includes(' ')) {
+      const filter = val.slice(1).toLowerCase();
+      setSlashFilter(filter);
+      setShowSlashMenu(true);
+      setSelectedSlashIndex(0);
+    } else {
+      setShowSlashMenu(false);
+    }
 
     // Auto-resize textarea
     const ta = e.target;
@@ -102,6 +277,38 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
 
   return (
     <div className="composer-wrapper">
+      {/* Slash command autocomplete */}
+      {showSlashMenu && (
+        <div className="slash-menu">
+          {getFilteredCommands().map((cmd, i) => (
+            <div
+              key={cmd.name}
+              className={`slash-menu-item ${i === selectedSlashIndex ? 'active' : ''}`}
+              onClick={() => {
+                if (cmd.name === 'poll') {
+                  setShowPoll(true);
+                  setInput('');
+                  setShowSlashMenu(false);
+                } else {
+                  setInput(`/${cmd.name} `);
+                  setShowSlashMenu(false);
+                  textareaRef.current?.focus();
+                }
+              }}
+              onMouseEnter={() => setSelectedSlashIndex(i)}
+            >
+              <div className="slash-menu-name">/{cmd.name}</div>
+              <div className="slash-menu-desc">{cmd.description}</div>
+            </div>
+          ))}
+          {getFilteredCommands().length === 0 && (
+            <div className="slash-menu-item" style={{ opacity: 0.5 }}>
+              <div className="slash-menu-desc">Kein passender Befehl</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Emoji picker */}
       {showEmoji && (
         <EmojiPicker
@@ -114,11 +321,19 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
       {showGif && (
         <GifPicker
           onSelect={(url) => {
-            // Send GIF URL as message
             api.sendMessage(channelId, url, replyToId);
             if (onReplySent) onReplySent();
+            setShowGif(false);
           }}
           onClose={() => setShowGif(false)}
+        />
+      )}
+
+      {/* Poll dialog */}
+      {showPoll && (
+        <CreatePollDialog
+          channelId={channelId}
+          onClose={() => { setShowPoll(false); setInput(''); }}
         />
       )}
 
@@ -149,6 +364,18 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
       )}
 
       <div className="composer">
+        {/* Plus button for extras */}
+        <button
+          className="composer-action"
+          onClick={() => setShowPoll(true)}
+          title="Umfrage erstellen"
+          aria-label="Umfrage erstellen"
+          type="button"
+          style={{ fontSize: 16, fontWeight: 700 }}
+        >
+          +
+        </button>
+
         {/* Emoji toggle */}
         <button
           className="composer-action"
@@ -182,7 +409,7 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
               const file = e.target.files?.[0];
               if (file) {
                 if (file.size > 25 * 1024 * 1024) {
-                  alert('Datei zu groß (max. 25 MB)');
+                  toast.error('Datei zu groß (max. 25 MB)');
                 } else {
                   uploadFile(file);
                 }
@@ -196,7 +423,7 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
         <textarea
           ref={textareaRef}
           className="composer-input"
-          placeholder={`Nachricht an #${channelName}`}
+          placeholder={`Nachricht an #${channelName} — Tippe / für Befehle`}
           value={input}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
@@ -207,9 +434,9 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
 
         {/* Send button */}
         <button
-          className={`composer-send ${input.trim() ? 'active' : ''}`}
+          className={`composer-send ${input.trim() || pendingFiles.some(f => f.attachmentId) ? 'active' : ''}`}
           onClick={handleSend}
-          disabled={!input.trim() || sending}
+          disabled={(!input.trim() && !pendingFiles.some(f => f.attachmentId)) || sending}
           title="Senden (Enter)"
           type="button"
         >

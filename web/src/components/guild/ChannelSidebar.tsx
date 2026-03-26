@@ -7,6 +7,9 @@ import { VoiceConnectedBar } from '../voice/VoiceConnectedBar';
 import { VoiceChannel } from '../voice/VoiceChannel';
 import { ServerSettings } from '../admin/ServerSettings';
 import { InviteDialog } from '../admin/InviteDialog';
+import { ChannelSettings } from '../admin/ChannelSettings';
+import { api } from '../../api/client';
+import { toast } from '../../stores/toast';
 import type { Guild, User, Channel } from '../../api/client';
 
 interface Props {
@@ -21,6 +24,7 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
   const [showSettings, setShowSettings] = useState(false);
   const [showUserSettings, setShowUserSettings] = useState(false);
   const [inviteChannelId, setInviteChannelId] = useState<string | null>(null);
+  const [editChannel, setEditChannel] = useState<Channel | null>(null);
   const channelCtx = useContextMenu();
 
   const categories = guildChannels.filter((c) => c.type === 4);
@@ -32,14 +36,15 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
     { label: 'Einladung erstellen', icon: '🔗', onClick: () => setInviteChannelId(ch.id) },
     ...(isOwner ? [
       { separator: true },
-      { label: 'Kanal bearbeiten', icon: '⚙️', onClick: () => setShowSettings(true) },
+      { label: 'Kanal bearbeiten', icon: '⚙️', onClick: () => setEditChannel(ch) },
       { label: 'Kanal löschen', icon: '🗑️', danger: true, onClick: async () => {
         if (confirm(`Kanal "${ch.name}" wirklich löschen?`)) {
-          await fetch(`/api/v1/channels/${ch.id}`, {
-            method: 'DELETE',
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          });
-          loadGuilds();
+          try {
+            await api.deleteChannel(ch.id);
+            loadGuilds();
+          } catch {
+            toast.error('Löschen fehlgeschlagen');
+          }
         }
       }},
     ] : []),
@@ -55,6 +60,20 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
       >
         <span>{guild.name}</span>
         <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⚙</span>
+      </div>
+
+      {/* Invite button for quick access */}
+      <div style={{ padding: '4px 8px' }}>
+        <button
+          className="btn"
+          style={{ width: '100%', fontSize: 12, padding: '6px 8px', background: 'var(--brand-primary)', color: '#fff' }}
+          onClick={() => {
+            const firstText = guildChannels.find(c => c.type === 0);
+            if (firstText) setInviteChannelId(firstText.id);
+          }}
+        >
+          Freunde einladen
+        </button>
       </div>
 
       <div className="channel-list">
@@ -120,12 +139,13 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
           onUpdate={() => { loadGuilds(); setShowSettings(false); }}
           onDelete={async () => {
             if (confirm(`Server "${guild.name}" wirklich löschen? Das kann nicht rückgängig gemacht werden!`)) {
-              await fetch(`/api/v1/guilds/${guild.id}`, {
-                method: 'DELETE',
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-              });
-              loadGuilds();
-              setShowSettings(false);
+              try {
+                await api.deleteGuild(guild.id);
+                loadGuilds();
+                setShowSettings(false);
+              } catch {
+                toast.error('Löschen fehlgeschlagen');
+              }
             }
           }}
         />
@@ -134,6 +154,15 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
       {/* Invite dialog */}
       {inviteChannelId && (
         <InviteDialog channelId={inviteChannelId} onClose={() => setInviteChannelId(null)} />
+      )}
+
+      {/* Channel settings dialog */}
+      {editChannel && (
+        <ChannelSettings
+          channel={editChannel}
+          onClose={() => setEditChannel(null)}
+          onUpdate={() => { loadGuilds(); setEditChannel(null); }}
+        />
       )}
 
       {/* User settings */}

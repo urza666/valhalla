@@ -1860,3 +1860,132 @@ select:focus-visible {
     max-width: 220px;
   }
 }
+
+/* =========================
+   Slash Command Menu
+   ========================= */
+.slash-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-floating);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 100;
+  padding: 8px 0;
+  margin-bottom: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.slash-menu-item {
+  padding: 8px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.1s;
+}
+
+.slash-menu-item:hover,
+.slash-menu-item.active {
+  background: var(--brand-primary);
+}
+
+.slash-menu-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  min-width: 100px;
+}
+
+.slash-menu-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* =========================
+   Voice Button Off Line
+   ========================= */
+.voice-btn {
+  position: relative;
+}
+
+.voice-btn-off-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 2px;
+  background: var(--danger);
+  transform: translate(-50%, -50%) rotate(-45deg);
+  pointer-events: none;
+  border-radius: 1px;
+}
+
+/* =========================
+   LiveKit Audio Grid
+   ========================= */
+.lk-audio-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.lk-audio-tile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  transition: box-shadow 0.15s;
+}
+
+.lk-audio-tile.speaking {
+  box-shadow: 0 0 0 2px var(--status-online);
+}
+
+.lk-audio-tile .lk-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.lk-audio-name {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* =========================
+   User Popout Actions
+   ========================= */
+.user-popout-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* =========================
+   Channel Settings Enhancements
+   ========================= */
+.settings-panel select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%236d6f78'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+/* =========================
+   Toast Info Style
+   ========================= */
+.toast-info {
+  background: var(--brand-primary);
+}
