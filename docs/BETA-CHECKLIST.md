@@ -54,7 +54,7 @@
 - [x] Unread Badges
 - [x] @Mention Autocomplete
 - [ ] Thread Support (UI)
-- [ ] Presence System (echtes Online/Offline)
+- [x] Presence System (Gateway hooks → Online/Idle/Offline)
 
 ## 4. Infrastructure (BLOCKER)
 
@@ -70,7 +70,7 @@
 - [x] Graceful Shutdown
 - [ ] Staging Environment
 - [ ] Automated Backup Verification
-- [ ] Alerting Rules (Alertmanager)
+- [x] Alerting Rules (6 alert rules: API down, errors, WS sessions, memory, goroutines, restarts)
 
 ## 5. Code Quality
 
