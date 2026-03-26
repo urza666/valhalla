@@ -200,6 +200,7 @@ services:
     image: prom/prometheus:v2.51.0
     volumes:
       - ./deployments/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deployments/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
       - promdata:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'

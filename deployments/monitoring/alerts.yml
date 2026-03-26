@@ -1,0 +1,61 @@
+groups:
+  - name: valhalla
+    rules:
+      # API Server Health
+      - alert: ValhallaAPIDown
+        expr: up{job="valhalla-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Valhalla API is down"
+          description: "The API server has been unreachable for over 1 minute."
+
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(valhalla_http_errors_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "More than 0.1 errors/sec over 5 minutes."
+
+      # No Active WebSocket Sessions (potential gateway issue)
+      - alert: NoWebSocketSessions
+        expr: valhalla_ws_sessions_active == 0 and valhalla_uptime_seconds > 300
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "No active WebSocket sessions"
+          description: "Zero WS sessions for 10+ minutes (after 5min uptime)."
+
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: valhalla_memory_alloc_bytes > 500000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage (>500MB)"
+          description: "API server memory allocation exceeds 500MB."
+
+      # Too Many Goroutines (potential leak)
+      - alert: GoroutineLeak
+        expr: valhalla_goroutines > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Potential goroutine leak (>1000)"
+          description: "{{ $value }} goroutines active."
+
+      # API Uptime Reset (restart detected)
+      - alert: APIRestarted
+        expr: changes(valhalla_uptime_seconds[1h]) > 2
+        labels:
+          severity: info
+        annotations:
+          summary: "API restarted multiple times"
+          description: "{{ $value }} restarts in the last hour."
