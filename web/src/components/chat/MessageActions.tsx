@@ -63,13 +63,10 @@ function addQuickReaction(channelId: string, messageId: string) {
 }
 
 function pinMessage(channelId: string, messageId: string) {
-  // Pin endpoint: PUT /channels/:id/pins/:messageId (if exists)
-  // Fallback: just acknowledge for now (pin API needs to be wired)
-  fetch(`/api/v1/channels/${channelId}/messages/${messageId}/ack`, {
-    method: 'POST',
+  fetch(`/api/v1/channels/${channelId}/pins/${messageId}`, {
+    method: 'PUT',
     headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
   });
-  // Note: Full pin/unpin requires backend endpoint to be created
 }
 
 function copyMessageLink(channelId: string, messageId: string) {

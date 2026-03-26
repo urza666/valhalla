@@ -227,6 +227,60 @@ func (h *Handler) RemoveReaction(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// PinMessage handles PUT /api/v1/channels/{channelID}/pins/{messageID}
+func (h *Handler) PinMessage(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
+	messageID, _ := strconv.ParseInt(chi.URLParam(r, "messageID"), 10, 64)
+
+	// Update the message as pinned
+	h.repo.db.Exec(r.Context(), `UPDATE messages SET pinned = true WHERE id = $1 AND channel_id = $2`, messageID, channelID)
+
+	// Add to pinned_messages table
+	h.repo.db.Exec(r.Context(), `
+		INSERT INTO pinned_messages (channel_id, message_id, pinned_by)
+		VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+	`, channelID, messageID, user.ID)
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// UnpinMessage handles DELETE /api/v1/channels/{channelID}/pins/{messageID}
+func (h *Handler) UnpinMessage(w http.ResponseWriter, r *http.Request) {
+	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
+	messageID, _ := strconv.ParseInt(chi.URLParam(r, "messageID"), 10, 64)
+
+	h.repo.db.Exec(r.Context(), `UPDATE messages SET pinned = false WHERE id = $1 AND channel_id = $2`, messageID, channelID)
+	h.repo.db.Exec(r.Context(), `DELETE FROM pinned_messages WHERE channel_id = $1 AND message_id = $2`, channelID, messageID)
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetPinnedMessages handles GET /api/v1/channels/{channelID}/pins
+func (h *Handler) GetPinnedMessages(w http.ResponseWriter, r *http.Request) {
+	channelID, _ := strconv.ParseInt(chi.URLParam(r, "channelID"), 10, 64)
+
+	messages, err := h.repo.GetMessages(r.Context(), channelID, MessagesQuery{Limit: 50})
+	if err != nil {
+		apierror.NewInternal("Failed to fetch pins").Write(w)
+		return
+	}
+
+	// Filter pinned only (simpler than a separate query for MVP)
+	var pinned []Message
+	for _, m := range messages {
+		if m.Pinned {
+			pinned = append(pinned, m)
+		}
+	}
+	if pinned == nil {
+		pinned = []Message{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(pinned)
+}
+
 // AckMessage handles POST /api/v1/channels/{channelID}/messages/{messageID}/ack
 func (h *Handler) AckMessage(w http.ResponseWriter, r *http.Request) {
 	user := auth.UserFromContext(r.Context())

@@ -88,22 +88,37 @@ export function PollCard({ poll: initialPoll, onUpdate }: Props) {
 }
 
 // Create poll dialog
-export function CreatePollDialog({ onClose }: { onClose: () => void; onCreated?: (poll: any) => void }) {
+export function CreatePollDialog({ onClose, channelId }: { onClose: () => void; onCreated?: (poll: any) => void; channelId?: string }) {
   const [question, setQuestion] = useState('');
   const [options, setOptions] = useState(['', '']);
   const [multiselect, setMultiselect] = useState(false);
   const [hours, setHours] = useState(24);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
 
   const addOption = () => { if (options.length < 10) setOptions([...options, '']); };
 
   const create = async () => {
     const validOptions = options.filter((o) => o.trim());
     if (!question.trim() || validOptions.length < 2) return;
+    if (!channelId) { setError('Kein Kanal ausgewaehlt'); return; }
 
-    // TODO: Create poll via message + poll endpoint
-    // For now this is a placeholder
-    alert('Poll erstellt (Backend-Integration in Arbeit)');
-    onClose();
+    setCreating(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/v1/channels/${channelId}/polls`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ question: question.trim(), options: validOptions, allow_multiselect: multiselect, duration_hours: hours }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.message || 'Fehler beim Erstellen');
+      } else {
+        onClose();
+      }
+    } catch { setError('Netzwerkfehler'); }
+    setCreating(false);
   };
 
   return (
@@ -141,7 +156,10 @@ export function CreatePollDialog({ onClose }: { onClose: () => void; onCreated?:
           <input type="number" value={hours} onChange={(e) => setHours(Number(e.target.value))} min={0} max={720} />
         </div>
 
-        <button className="btn" onClick={create}>Umfrage erstellen</button>
+        {error && <div className="error-text">{error}</div>}
+        <button className="btn" onClick={create} disabled={creating}>
+          {creating ? 'Erstelle...' : 'Umfrage erstellen'}
+        </button>
       </div>
     </div>
   );

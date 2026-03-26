@@ -264,6 +264,11 @@ func main() {
 				// Read state
 				r.Post("/messages/{messageID}/ack", messageHandler.AckMessage)
 
+				// Pinned messages
+				r.Get("/pins", messageHandler.GetPinnedMessages)
+				r.Put("/pins/{messageID}", messageHandler.PinMessage)
+				r.Delete("/pins/{messageID}", messageHandler.UnpinMessage)
+
 				// Typing
 				r.Post("/typing", gwServer.HandleTyping)
 
@@ -279,6 +284,9 @@ func main() {
 				// Kanban boards per channel
 				r.Get("/boards", kanbanHandler.GetChannelBoards)
 				r.Post("/boards", kanbanHandler.CreateBoard)
+
+				// Polls per channel
+				r.Post("/polls", pollHandler.CreatePoll)
 
 				// Invites
 				r.Post("/invites", guildHandler.CreateInvite)

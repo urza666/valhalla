@@ -419,6 +419,54 @@ func Test25_Typing(t *testing.T) {
 	t.Log("Typing OK")
 }
 
+func Test26_PinMessage(t *testing.T) {
+	if testMsgID == "" || testChanID == "" {
+		t.Skip("No message/channel")
+	}
+
+	// Pin
+	status, _ := apiRequest(t, "PUT", "/channels/"+testChanID+"/pins/"+testMsgID, nil, testToken)
+	if status != 204 {
+		t.Fatalf("PinMessage failed: status=%d", status)
+	}
+
+	// Get pins
+	status, result := apiRequestArray(t, "GET", "/channels/"+testChanID+"/pins", testToken)
+	if status != 200 {
+		t.Fatalf("GetPins failed: status=%d", status)
+	}
+	t.Logf("PinMessage OK: %d pinned messages", len(result))
+
+	// Unpin
+	status, _ = apiRequest(t, "DELETE", "/channels/"+testChanID+"/pins/"+testMsgID, nil, testToken)
+	if status != 204 {
+		t.Fatalf("UnpinMessage failed: status=%d", status)
+	}
+	t.Log("UnpinMessage OK")
+}
+
+func Test27_CreatePoll(t *testing.T) {
+	if testChanID == "" {
+		t.Skip("No channel")
+	}
+
+	status, resp := apiRequest(t, "POST", "/channels/"+testChanID+"/polls", map[string]any{
+		"question":          "Test Umfrage?",
+		"options":           []string{"Ja", "Nein", "Vielleicht"},
+		"allow_multiselect": false,
+		"duration_hours":    24,
+	}, testToken)
+
+	if status != 201 {
+		t.Fatalf("CreatePoll failed: status=%d resp=%v", status, resp)
+	}
+
+	if resp["question"] != "Test Umfrage?" {
+		t.Fatalf("CreatePoll: wrong question: %v", resp["question"])
+	}
+	t.Log("CreatePoll OK")
+}
+
 // ═══════════════════════════════════════════════════════
 // Test 6: Invites
 // ═══════════════════════════════════════════════════════

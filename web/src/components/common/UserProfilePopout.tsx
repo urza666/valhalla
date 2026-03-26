@@ -65,7 +65,16 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
         )}
 
         <div className="user-popout-actions">
-          <button className="btn" style={{ width: '100%', fontSize: 14, padding: '8px 12px' }}>
+          <button className="btn" style={{ width: '100%', fontSize: 14, padding: '8px 12px' }} onClick={async () => {
+            try {
+              await fetch('/api/v1/users/@me/channels', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+                body: JSON.stringify({ recipient_id: userId }),
+              });
+              onClose();
+            } catch { /* ignore */ }
+          }}>
             Nachricht senden
           </button>
         </div>
