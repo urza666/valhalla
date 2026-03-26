@@ -176,10 +176,12 @@ func main() {
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", authHandler.Register)
-			r.Post("/login", authHandler.Login)
-			r.Post("/forgot-password", authHandler.ForgotPassword)
-			r.Post("/reset-password", authHandler.ResetPassword)
+			// Strict rate limits on auth endpoints (5 req/min per IP)
+			authLimiter := middleware.StrictLimit(5, time.Minute)
+			r.With(authLimiter).Post("/register", authHandler.Register)
+			r.With(authLimiter).Post("/login", authHandler.Login)
+			r.With(authLimiter).Post("/forgot-password", authHandler.ForgotPassword)
+			r.With(authLimiter).Post("/reset-password", authHandler.ResetPassword)
 		})
 
 		// Invite preview (public)

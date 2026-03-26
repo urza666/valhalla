@@ -192,6 +192,39 @@ services:
     networks:
       - valhalla
 
+  # ─── Prometheus (Metrics Collection) ─────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    volumes:
+      - ./deployments/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=1GB'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    restart: unless-stopped
+    networks:
+      - valhalla
+
+  # ─── Grafana (Dashboards) ──────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    volumes:
+      - grafanadata:/var/lib/grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-valhalla}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "${GRAFANA_PORT:-3083}:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - valhalla
+
 # ─── Volumes ──────────────────────────────────────────────
 volumes:
   pgdata:
@@ -203,6 +236,10 @@ volumes:
   miniodata:
     driver: local
   meilidata:
+    driver: local
+  promdata:
+    driver: local
+  grafanadata:
     driver: local
 
 # ─── Network ─────────────────────────────────────────────
