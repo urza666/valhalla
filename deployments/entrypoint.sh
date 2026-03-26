@@ -14,6 +14,7 @@ sleep 5
 echo "Running database migrations..."
 ./valhalla-migrate -direction up 2>&1 || echo "Migrations: no changes or already up-to-date."
 
-# Start API server
-echo "Starting Valhalla API on :8080..."
-exec ./valhalla-api
+# Start the requested binary (default: valhalla-api)
+BINARY="${1:-./valhalla-api}"
+echo "Starting ${BINARY}..."
+exec ${BINARY}
