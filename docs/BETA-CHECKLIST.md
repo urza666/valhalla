@@ -22,13 +22,13 @@
 
 ## 2. Legal / Compliance (BLOCKER)
 
-- [x] Impressum (HTML-Template — **ECHTE DATEN MÜSSEN EINGETRAGEN WERDEN**)
+- [x] Impressum (Ankh-IT SARL, Luxembourg — RCS + TVA-Nummer noch eintragen)
 - [x] Datenschutzerklärung (DSGVO Art. 13/14)
 - [x] Nutzungsbedingungen mit AUP
 - [x] Account-Löschung (DSGVO Art. 17)
 - [x] Daten-Export (DSGVO Art. 20)
 - [x] Content-Report-System
-- [ ] Impressum: Platzhalter durch echte Daten ersetzen
+- [ ] Impressum: RCS-Nummer und TVA-Nummer eintragen (sobald Registrierung abgeschlossen)
 - [ ] AVV-Vorlage für Self-Hosting-Betreiber
 - [ ] Consent-Management für Tenor GIF-API
 
@@ -120,9 +120,9 @@
 ## Go/No-Go Entscheidung
 
 ### BLOCKER (müssen vor Beta gelöst sein):
-1. **Impressum mit echten Daten befüllen** (Legal)
+1. ~~Impressum mit echten Daten befüllen~~ → Ankh-IT SARL eingetragen, RCS/TVA ausstehend
 2. **E-Mail-Provider konfigurieren** (Password-Reset, MFA-Recovery)
-3. **Rechtsform klären** (UG empfohlen)
+3. ~~Rechtsform klären~~ → Ankh-IT SARL, Luxembourg
 
 ### EMPFOHLEN (sollten vor Beta gelöst sein):
 4. Staging-Environment aufsetzen
