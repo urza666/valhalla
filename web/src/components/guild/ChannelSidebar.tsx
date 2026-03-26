@@ -8,6 +8,7 @@ import { VoiceChannel } from '../voice/VoiceChannel';
 import { ServerSettings } from '../admin/ServerSettings';
 import { InviteDialog } from '../admin/InviteDialog';
 import { ChannelSettings } from '../admin/ChannelSettings';
+import { UserAvatar } from '../common/UserAvatar';
 import { api } from '../../api/client';
 import { toast } from '../../stores/toast';
 import { useUnreadStore } from '../../stores/unread';
@@ -112,7 +113,7 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
       <VoiceConnectedBar />
 
       <div className="user-panel">
-        <div className="user-panel-avatar">{user.username[0].toUpperCase()}</div>
+        <UserAvatar user={{ username: user.username, display_name: user.display_name, avatar: user.avatar }} size={32} showStatus status="online" />
         <div className="user-panel-info" onClick={() => setShowUserSettings(true)} style={{ cursor: 'pointer' }}>
           <div className="user-panel-name">{user.display_name || user.username}</div>
           <div className="user-panel-status">Online</div>

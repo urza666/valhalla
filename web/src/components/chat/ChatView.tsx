@@ -10,6 +10,7 @@ import { KanbanBoard } from '../kanban/KanbanBoard';
 import { WikiView } from '../wiki/WikiView';
 import { SearchPanel } from './SearchPanel';
 import { UserProfilePopout } from '../common/UserProfilePopout';
+import { UserAvatar } from '../common/UserAvatar';
 import { toast } from '../../stores/toast';
 import type { Message } from '../../api/client';
 
@@ -413,8 +414,12 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, onDoubleClick
 
   return (
     <div className={`message ${isEditing ? 'editing' : ''}`} onDoubleClick={onDoubleClickEdit}>
-      <div className="message-avatar">
-        {message.author.username[0].toUpperCase()}
+      <div className="message-avatar" style={{ background: 'none' }}>
+        <UserAvatar
+          user={{ username: message.author.username, display_name: message.author.display_name, avatar: message.author.avatar }}
+          size={40}
+          onClick={(e) => setAuthorPopout({ x: e.clientX, y: e.clientY })}
+        />
       </div>
       <div className="message-body">
         {isReply && (

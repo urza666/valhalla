@@ -22,6 +22,33 @@ export function GifPicker({ onSelect, onClose }: Props) {
   const [results, setResults] = useState<GifResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [trending, setTrending] = useState<GifResult[]>([]);
+  const [consent, setConsent] = useState(() => localStorage.getItem('gif_consent') === 'true');
+
+  // Show consent banner if not yet accepted
+  if (!consent) {
+    return (
+      <div className="gif-picker">
+        <div style={{ padding: 16, textAlign: 'center' }}>
+          <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>
+            Die GIF-Suche wird von <strong>Google Tenor</strong> bereitgestellt.
+            Bei Nutzung werden Suchanfragen an Google-Server übermittelt.
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
+            Mehr Infos in unserer <a href="/datenschutz.html" target="_blank" style={{ color: 'var(--text-link)' }}>Datenschutzerklärung</a>.
+          </p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+            <button className="btn" style={{ width: 'auto', fontSize: 13 }} onClick={() => {
+              localStorage.setItem('gif_consent', 'true');
+              setConsent(true);
+            }}>
+              Akzeptieren
+            </button>
+            <button className="btn-small" onClick={onClose}>Abbrechen</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Load trending on mount
   useEffect(() => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, Member } from '../../api/client';
 import { useAuthStore } from '../../stores/auth';
 import { useAppStore } from '../../stores/app';
-import { PresenceBadge } from '../common/PresenceBadge';
+import { UserAvatar } from '../common/UserAvatar';
 import { ContextMenu, useContextMenu, MenuItem } from '../common/ContextMenu';
 import { UserProfilePopout } from '../common/UserProfilePopout';
 import { toast } from '../../stores/toast';
@@ -104,12 +104,13 @@ function MemberItem({ member, guildId, status }: { member: Member; guildId: stri
         onContextMenu={(e) => ctx.show(e, getContextItems())}
         style={{ cursor: 'pointer' }}
       >
-        <div className="member-avatar-wrap">
-          <div className="member-avatar" style={{ opacity: status === 'offline' ? 0.4 : 1 }}>
-            {user.username[0].toUpperCase()}
-          </div>
-          <PresenceBadge status={status} size={8} />
-        </div>
+        <UserAvatar
+          user={{ username: user.username, display_name: user.display_name, avatar: user.avatar }}
+          size={32}
+          showStatus
+          status={status}
+          style={{ opacity: status === 'offline' ? 0.5 : 1 }}
+        />
         <span className="member-name" style={{ opacity: status === 'offline' ? 0.4 : 1 }}>
           {name}
         </span>

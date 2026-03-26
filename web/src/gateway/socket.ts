@@ -16,18 +16,30 @@ export class GatewaySocket {
   private token: string;
   private listeners = new Map<string, Set<EventHandler>>();
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 10;
+  private maxReconnectAttempts = 15;
+  // @ts-ignore — used in scheduleReconnect
+  private maxReconnectDelay = 30000;
   private canResume = false;
+  // @ts-ignore — used in connect/disconnect
+  private intentionalClose = false;
+  // @ts-ignore — used in disconnect/scheduleReconnect
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(token: string) {
     this.token = token;
   }
 
   connect() {
+    this.intentionalClose = false;
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${window.location.host}/ws`;
 
-    this.ws = new WebSocket(url);
+    try {
+      this.ws = new WebSocket(url);
+    } catch {
+      this.scheduleReconnect();
+      return;
+    }
 
     this.ws.onopen = () => {
       console.log('[Gateway] Connected');
@@ -48,14 +60,8 @@ export class GatewaySocket {
         this.canResume = false;
       }
 
-      if (this.reconnectAttempts < this.maxReconnectAttempts) {
-        const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), 60000);
-        const jitter = Math.random() * 1000;
-        console.log(`[Gateway] Reconnecting in ${Math.round(delay + jitter)}ms (attempt ${this.reconnectAttempts + 1})...`);
-        setTimeout(() => {
-          this.reconnectAttempts++;
-          this.connect();
-        }, delay + jitter);
+      if (!this.intentionalClose) {
+        this.scheduleReconnect();
       }
     };
 
@@ -65,10 +71,28 @@ export class GatewaySocket {
   }
 
   disconnect() {
-    this.maxReconnectAttempts = 0;
+    this.intentionalClose = true;
     this.canResume = false;
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     this.ws?.close(1000, 'Client disconnect');
     this.cleanup();
+  }
+
+  private scheduleReconnect() {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn('[Gateway] Max reconnect attempts reached');
+      return;
+    }
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);
+    const jitter = Math.random() * 1000;
+    console.log(`[Gateway] Reconnecting in ${Math.round(delay + jitter)}ms (attempt ${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})...`);
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectAttempts++;
+      this.connect();
+    }, delay + jitter);
   }
 
   on(event: string, handler: EventHandler) {

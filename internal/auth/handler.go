@@ -12,11 +12,15 @@ import (
 // Handler handles HTTP requests for authentication.
 type Handler struct {
 	service *Service
+	lockout *LoginLockout
 }
 
 // NewHandler creates a new auth handler.
 func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+	return &Handler{
+		service: service,
+		lockout: NewLoginLockout(DefaultLockoutConfig),
+	}
 }
 
 // Register handles POST /api/v1/auth/register
@@ -43,6 +47,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 // Login handles POST /api/v1/auth/login
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	// Check lockout
+	lockoutKey := r.RemoteAddr
+	if h.lockout.IsLocked(lockoutKey) {
+		apierror.NewBadRequest("Zu viele fehlgeschlagene Versuche. Bitte warte 15 Minuten.").Write(w)
+		return
+	}
+
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		apierror.NewBadRequest("Invalid request body").Write(w)
@@ -51,9 +62,17 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.service.Login(r.Context(), req)
 	if err != nil {
+		locked := h.lockout.RecordFailure(lockoutKey)
+		if locked {
+			apierror.NewBadRequest("Konto vorübergehend gesperrt nach zu vielen Fehlversuchen.").Write(w)
+			return
+		}
 		h.handleAuthError(w, err)
 		return
 	}
+
+	// Successful login — clear lockout
+	h.lockout.RecordSuccess(lockoutKey)
 
 	// Check if MFA is enabled
 	if resp.User.MFAEnabled {

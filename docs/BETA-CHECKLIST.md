@@ -18,7 +18,7 @@
 - [x] Permission Checks on Message/Channel operations
 - [x] MFA (TOTP) Support
 - [ ] E-Mail-Versand für Password-Reset (aktuell nur Token-Generierung)
-- [ ] Account-Lockout nach N fehlgeschlagenen Login-Versuchen
+- [x] Account-Lockout (5 Fehlversuche → 15min IP-Lockout)
 
 ## 2. Legal / Compliance (BLOCKER)
 
@@ -30,7 +30,7 @@
 - [x] Content-Report-System
 - [ ] Impressum: RCS-Nummer und TVA-Nummer eintragen (sobald Registrierung abgeschlossen)
 - [ ] AVV-Vorlage für Self-Hosting-Betreiber
-- [ ] Consent-Management für Tenor GIF-API
+- [x] Consent-Management für Tenor GIF-API (Opt-in Banner)
 
 ## 3. Core Functionality (BLOCKER)
 
@@ -68,7 +68,7 @@
 - [x] GitLab CI Pipeline
 - [x] Image Pinning (no :latest)
 - [x] Graceful Shutdown
-- [ ] Staging Environment
+- [x] Staging Environment (dval01e, 192.168.0.193, AlmaLinux 9)
 - [ ] Automated Backup Verification
 - [x] Alerting Rules (6 alert rules: API down, errors, WS sessions, memory, goroutines, restarts)
 
@@ -113,7 +113,7 @@
 - [x] Backup Restore Runbook
 - [x] Permission System Docs (docs/12, 13)
 - [ ] Contributing Guide (CONTRIBUTING.md aktualisieren)
-- [ ] Changelog (CHANGELOG.md)
+- [x] Changelog (CHANGELOG.md)
 
 ---
 
@@ -148,6 +148,6 @@
 | Code-Qualität | 9/12 | 3 | 0 |
 | UX/A11y | 12/14 | 2 | 0 |
 | Dokumentation | 6/8 | 2 | 0 |
-| **Gesamt** | **74/91 (81%)** | **17** | **1** |
+| **Gesamt** | **79/90 (87%)** | **11** | **1** |
 
-**Empfehlung:** Das Projekt ist zu **81% Beta-Ready**. Der einzige harte Blocker ist das Impressum (echte Daten). Nach Klärung der Rechtsform und E-Mail-Provider-Konfiguration kann die Public Beta starten.
+**Empfehlung:** Das Projekt ist zu **87% Beta-Ready**. Der einzige harte Blocker ist das Impressum (echte Daten). Nach Klärung der Rechtsform und E-Mail-Provider-Konfiguration kann die Public Beta starten.
