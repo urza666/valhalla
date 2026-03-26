@@ -1,0 +1,193 @@
+# ═══════════════════════════════════════════════════════════
+# Valhalla CI — Quality Gates
+# ═══════════════════════════════════════════════════════════
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GO_VERSION: "1.22"
+  NODE_VERSION: "20"
+
+jobs:
+  # ── Backend Lint ────────────────────────────────────────
+  go-lint:
+    name: "Go Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --timeout=5m
+
+  # ── Backend Build ───────────────────────────────────────
+  go-build:
+    name: "Go Build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Build all binaries
+        run: go build ./...
+
+  # ── Backend Unit Tests ──────────────────────────────────
+  go-test:
+    name: "Go Tests"
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: valhalla_test
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: valhalla_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U valhalla_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
+    env:
+      DATABASE_URL: "postgres://valhalla_test:testpass@localhost:5432/valhalla_test?sslmode=disable"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Run tests with race detector
+        run: go test -race -count=1 -timeout 120s ./...
+
+  # ── Backend Security ────────────────────────────────────
+  go-security:
+    name: "Go Security"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Verify go module checksums
+        run: go mod verify
+
+      - name: Check for vulnerabilities
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...
+
+  # ── Frontend Lint & Typecheck ───────────────────────────
+  frontend-lint:
+    name: "Frontend Lint"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+      # ESLint runs only if config exists — add eslint.config.js to enable
+      - name: ESLint (if configured)
+        run: |
+          if [ -f eslint.config.js ] || [ -f .eslintrc.json ] || [ -f .eslintrc.js ]; then
+            npx eslint src/
+          else
+            echo "No ESLint config found — skipping (add eslint.config.js to enable)"
+          fi
+
+  # ── Frontend Tests ──────────────────────────────────────
+  frontend-test:
+    name: "Frontend Tests"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Vitest
+        run: npm test
+
+  # ── Frontend Security ───────────────────────────────────
+  frontend-security:
+    name: "Frontend Security"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit (production deps)
+        run: npm audit --omit=dev || true
+
+  # ── Docker Build Verify ─────────────────────────────────
+  docker-build:
+    name: "Docker Build"
+    runs-on: ubuntu-latest
+    needs: [go-build, frontend-lint]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f deployments/Dockerfile -t valhalla-api:ci .
+
+      - name: Build Web image
+        run: docker build -f deployments/Dockerfile.web -t valhalla-web:ci .

@@ -143,7 +143,7 @@ function CreateGuildModal({ onClose }: { onClose: () => void }) {
       position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }} onClick={onClose}>
-      <form className="auth-form" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit}>
+      <form className="auth-form" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmit} style={{ animation: 'slideUp 0.3s ease' }}>
         <h1>Server erstellen</h1>
         <p>Gib deinem neuen Server einen Namen</p>
         <div className="form-group">
@@ -158,7 +158,7 @@ function CreateGuildModal({ onClose }: { onClose: () => void }) {
             autoFocus
           />
         </div>
-        <button type="submit" className="btn" disabled={loading}>
+        <button type="submit" className="btn-primary" style={{ width: '100%', padding: '10px 16px' }} disabled={loading}>
           {loading ? 'Erstellen...' : 'Erstellen'}
         </button>
       </form>

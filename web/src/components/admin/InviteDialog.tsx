@@ -37,7 +37,7 @@ export function InviteDialog({ channelId, onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="auth-form" onClick={(e) => e.stopPropagation()} style={{ width: 440 }}>
+      <div className="auth-form" onClick={(e) => e.stopPropagation()} style={{ width: 440, animation: 'slideUp 0.3s ease' }}>
         <h1 style={{ fontSize: 20 }}>Freunde einladen</h1>
         <p>Teile diesen Link, um Leute einzuladen:</p>
 
@@ -60,7 +60,7 @@ export function InviteDialog({ channelId, onClose }: Props) {
                   fontSize: 14, outline: 'none',
                 }}
               />
-              <button className="btn" style={{ width: 'auto', padding: '8px 16px', fontSize: 14 }} onClick={copyLink}>
+              <button className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={copyLink}>
                 {copied ? 'Kopiert!' : 'Kopieren'}
               </button>
             </div>
@@ -83,7 +83,7 @@ export function InviteDialog({ channelId, onClose }: Props) {
             onKeyDown={(e) => { if (e.key === 'Enter') handleJoinServer(); }}
             style={{ flex: 1 }}
           />
-          <button className="btn" style={{ width: 'auto', padding: '8px 16px', fontSize: 14 }} onClick={handleJoinServer} disabled={!joinCode.trim()}>
+          <button className="btn-primary" style={{ padding: '8px 16px', fontSize: 14 }} onClick={handleJoinServer} disabled={!joinCode.trim()}>
             Beitreten
           </button>
         </div>

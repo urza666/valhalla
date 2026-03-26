@@ -90,7 +90,7 @@ export function FriendsView() {
                 onKeyDown={(e) => e.key === 'Enter' && sendRequest()}
                 style={{ flex: 1 }}
               />
-              <button className="btn" style={{ width: 'auto' }} onClick={sendRequest}>
+              <button className="btn-primary" style={{ width: 'auto' }} onClick={sendRequest}>
                 Anfrage senden
               </button>
             </div>
@@ -105,7 +105,7 @@ export function FriendsView() {
               <div className="friends-empty">Noch keine Freunde. Füge jemanden hinzu!</div>
             ) : (
               friends.map((f) => (
-                <div key={f.id} className="friend-item">
+                <div key={f.id} className="friend-item hover-lift">
                   <div className="friend-avatar">{f.username[0].toUpperCase()}</div>
                   <div className="friend-info">
                     <div className="friend-name">{f.display_name || f.username}</div>

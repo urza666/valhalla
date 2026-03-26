@@ -67,8 +67,8 @@ export function ChannelSidebar({ guild, user, onChannelSelected }: Props) {
       {/* Invite button for quick access */}
       <div style={{ padding: '4px 8px' }}>
         <button
-          className="btn"
-          style={{ width: '100%', fontSize: 12, padding: '6px 8px', background: 'var(--brand-primary)', color: '#fff' }}
+          className="btn-primary"
+          style={{ width: '100%', fontSize: 12, padding: '6px 8px' }}
           onClick={() => {
             const firstText = guildChannels.find(c => c.type === 0);
             if (firstText) setInviteChannelId(firstText.id);

@@ -243,7 +243,7 @@ export function ChatView({ channelId }: Props) {
 
       {/* Pinned messages panel */}
       {showPins && (
-        <div className="search-panel">
+        <div className="search-panel" style={{ animation: 'slideUp 0.2s ease' }}>
           <div className="search-panel-header">
             <span style={{ fontWeight: 600, fontSize: 14 }}>📌 Gepinnte Nachrichten</span>
             <button className="search-close" onClick={() => setShowPins(false)}>x</button>
@@ -267,8 +267,8 @@ export function ChatView({ channelId }: Props) {
                   <Markdown content={pin.content} />
                 </div>
                 <button
-                  className="btn-small danger"
-                  style={{ marginTop: 4 }}
+                  className="btn-danger"
+                  style={{ marginTop: 4, padding: '4px 10px', fontSize: 12 }}
                   onClick={async () => {
                     try {
                       await api.unpinMessage(channelId, pin.id);

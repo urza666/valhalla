@@ -42,3 +42,7 @@ tmp/
 .claude/
 
 # Internal team roles (not for public repo)
+team_roles/
+
+# Uploads
+uploads/

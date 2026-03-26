@@ -68,7 +68,7 @@
 - [x] GitLab CI Pipeline
 - [x] Image Pinning (no :latest)
 - [x] Graceful Shutdown
-- [x] Staging Environment (dval01e, 192.168.0.193, AlmaLinux 9)
+- [x] Staging Environment (see Vault for host details, AlmaLinux 9)
 - [ ] Automated Backup Verification
 - [x] Alerting Rules (6 alert rules: API down, errors, WS sessions, memory, goroutines, restarts)
 

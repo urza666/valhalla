@@ -145,16 +145,26 @@ func (s *Service) Vote(ctx context.Context, pollID, optionID, userID int64) erro
 		return ErrPollExpired
 	}
 
-	// If not multiselect, remove existing vote first
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
 	if !allowMulti {
-		s.db.Exec(ctx, `DELETE FROM poll_votes WHERE poll_id = $1 AND user_id = $2`, pollID, userID)
+		if _, err := tx.Exec(ctx, `DELETE FROM poll_votes WHERE poll_id = $1 AND user_id = $2`, pollID, userID); err != nil {
+			return err
+		}
 	}
 
-	_, err = s.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO poll_votes (poll_id, option_id, user_id) VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING
-	`, pollID, optionID, userID)
-	return err
+	`, pollID, optionID, userID); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (s *Service) Unvote(ctx context.Context, pollID, optionID, userID int64) error {

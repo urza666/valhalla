@@ -383,22 +383,34 @@ func (r *Repository) GetEveryoneRole(ctx context.Context, guildID int64) (*Role,
 
 // UpdateRole applies partial updates to a role.
 func (r *Repository) UpdateRole(ctx context.Context, roleID int64, name *string, color *int, permissions *int64, hoist *bool, mentionable *bool) error {
-	if name != nil {
-		r.db.Exec(ctx, `UPDATE roles SET name = $2 WHERE id = $1`, roleID, *name)
-	}
-	if color != nil {
-		r.db.Exec(ctx, `UPDATE roles SET color = $2 WHERE id = $1`, roleID, *color)
-	}
-	if permissions != nil {
-		r.db.Exec(ctx, `UPDATE roles SET permissions = $2 WHERE id = $1`, roleID, *permissions)
-	}
-	if hoist != nil {
-		r.db.Exec(ctx, `UPDATE roles SET hoist = $2 WHERE id = $1`, roleID, *hoist)
-	}
-	if mentionable != nil {
-		r.db.Exec(ctx, `UPDATE roles SET mentionable = $2 WHERE id = $1`, roleID, *mentionable)
-	}
-	return nil
+	return r.WithTx(ctx, func(tx pgx.Tx) error {
+		if name != nil {
+			if _, err := tx.Exec(ctx, `UPDATE roles SET name = $2 WHERE id = $1`, roleID, *name); err != nil {
+				return err
+			}
+		}
+		if color != nil {
+			if _, err := tx.Exec(ctx, `UPDATE roles SET color = $2 WHERE id = $1`, roleID, *color); err != nil {
+				return err
+			}
+		}
+		if permissions != nil {
+			if _, err := tx.Exec(ctx, `UPDATE roles SET permissions = $2 WHERE id = $1`, roleID, *permissions); err != nil {
+				return err
+			}
+		}
+		if hoist != nil {
+			if _, err := tx.Exec(ctx, `UPDATE roles SET hoist = $2 WHERE id = $1`, roleID, *hoist); err != nil {
+				return err
+			}
+		}
+		if mentionable != nil {
+			if _, err := tx.Exec(ctx, `UPDATE roles SET mentionable = $2 WHERE id = $1`, roleID, *mentionable); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // DeleteRole removes a non-managed role.

@@ -11,7 +11,7 @@ export function UserSettings({ onClose }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="settings-panel" onClick={(e) => e.stopPropagation()} style={{ animation: 'fadeIn 0.2s ease' }}>
         <div className="settings-sidebar">
           <div className="settings-sidebar-title">Benutzer-Einstellungen</div>
           <button className={`settings-tab ${tab === 'profile' ? 'active' : ''}`} onClick={() => setTab('profile')}>Profil</button>
@@ -89,7 +89,7 @@ function ProfileTab() {
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>{bio.length}/190</div>
       </div>
 
-      <button className="btn" style={{ width: 'auto' }} onClick={save} disabled={saving}>
+      <button className="btn-primary" style={{ width: 'auto' }} onClick={save} disabled={saving}>
         {saved ? 'Gespeichert!' : saving ? 'Speichern...' : 'Änderungen speichern'}
       </button>
     </div>
@@ -156,7 +156,7 @@ function AccountTab() {
         <input type="password" value={newPw} onChange={(e) => setNewPw(e.target.value)} placeholder="Min. 8 Zeichen" />
       </div>
 
-      <button className="btn" style={{ width: 'auto' }} onClick={changePw} disabled={!currentPw || newPw.length < 8}>
+      <button className="btn-primary" style={{ width: 'auto' }} onClick={changePw} disabled={!currentPw || newPw.length < 8}>
         Passwort ändern
       </button>
 
@@ -167,8 +167,8 @@ function AccountTab() {
         Dein Konto und alle zugehörigen Daten werden unwiderruflich gelöscht. Nachrichten bleiben anonym erhalten.
       </p>
       <button
-        className="btn"
-        style={{ width: 'auto', background: 'var(--danger)' }}
+        className="btn-danger"
+        style={{ width: 'auto' }}
         onClick={async () => {
           const pw = prompt('Gib dein Passwort ein, um das Konto zu löschen:');
           if (!pw) return;
@@ -239,7 +239,7 @@ function SessionsTab() {
       </div>
 
       {sessions.length > 1 && (
-        <button className="btn" style={{ width: 'auto', marginTop: 16, background: 'var(--danger)' }} onClick={revokeAll}>
+        <button className="btn-danger" style={{ width: 'auto', marginTop: 16 }} onClick={revokeAll}>
           Alle anderen Sitzungen beenden
         </button>
       )}
@@ -278,7 +278,7 @@ function AppearanceTab() {
           <button
             className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
             onClick={() => applyTheme('dark')}
-            style={{ background: '#313338', color: '#f2f3f5', border: theme === 'dark' ? '2px solid var(--brand-primary)' : '2px solid var(--border-subtle)', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
+            style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: theme === 'dark' ? '2px solid var(--brand-primary)' : '2px solid var(--border-subtle)', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
           >
             🌙 Dunkel
           </button>

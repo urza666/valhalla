@@ -14,7 +14,7 @@ export function ServerSettings({ guild, onClose, onUpdate, onDelete }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
+      <div className="settings-panel" onClick={(e) => e.stopPropagation()} style={{ animation: 'fadeIn 0.2s ease' }}>
         <div className="settings-sidebar">
           <div className="settings-sidebar-title">{guild.name}</div>
           <button className={`settings-tab ${tab === 'overview' ? 'active' : ''}`} onClick={() => setTab('overview')}>Übersicht</button>
@@ -62,7 +62,7 @@ function OverviewTab({ guild, onUpdate }: { guild: Guild; onUpdate: (g: Guild) =
         <label>Servername</label>
         <input value={name} onChange={(e) => setName(e.target.value)} />
       </div>
-      <button className="btn" style={{ width: 'auto', marginTop: 12 }} onClick={save} disabled={saving}>
+      <button className="btn-primary" style={{ width: 'auto', marginTop: 12 }} onClick={save} disabled={saving}>
         {saving ? 'Speichern...' : 'Speichern'}
       </button>
     </div>
@@ -108,7 +108,7 @@ function ChannelsTab({ guildId }: { guildId: string }) {
           <option value={2}>Voice</option>
           <option value={4}>Kategorie</option>
         </select>
-        <button className="btn" style={{ width: 'auto' }} onClick={createChannel}>Erstellen</button>
+        <button className="btn-primary" style={{ width: 'auto' }} onClick={createChannel}>Erstellen</button>
       </div>
       <div className="settings-list">
         {channels.map((ch) => (
@@ -221,7 +221,7 @@ function RolesTab({ guildId }: { guildId: string }) {
       <h2>Rollen</h2>
       <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 16 }}>
         <input placeholder="Neuer Rollenname" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} style={{ flex: 1 }} />
-        <button className="btn" style={{ width: 'auto' }} onClick={createRole}>Erstellen</button>
+        <button className="btn-primary" style={{ width: 'auto' }} onClick={createRole}>Erstellen</button>
       </div>
 
       {editingRole && (
@@ -253,8 +253,8 @@ function RolesTab({ guildId }: { guildId: string }) {
             })}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn" style={{ width: 'auto' }} onClick={saveRole}>Speichern</button>
-            <button className="btn-small" onClick={() => setEditingRole(null)}>Abbrechen</button>
+            <button className="btn-primary" style={{ width: 'auto' }} onClick={saveRole}>Speichern</button>
+            <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: 13 }} onClick={() => setEditingRole(null)}>Abbrechen</button>
           </div>
         </div>
       )}

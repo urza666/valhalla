@@ -79,6 +79,20 @@ type ReadyData struct {
 	ResumeGatewayURL string   `json:"resume_gateway_url"`
 }
 
+// PresenceUpdateData is sent by the client to update their own presence,
+// and dispatched to other users when someone's presence changes.
+type PresenceUpdateData struct {
+	UserID     int64      `json:"user_id,string,omitempty"` // Set by server on dispatch
+	Status     string     `json:"status"`                   // online, idle, dnd, invisible
+	Activities []Activity `json:"activities,omitempty"`
+}
+
+// Activity represents a user activity (e.g., playing a game).
+type Activity struct {
+	Name string `json:"name"`
+	Type int    `json:"type"` // 0=Playing, 1=Streaming, 2=Listening, 3=Watching, 4=Custom
+}
+
 // TypingStartData is dispatched when a user starts typing.
 type TypingStartData struct {
 	ChannelID int64 `json:"channel_id,string"`

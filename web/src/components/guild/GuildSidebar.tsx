@@ -114,7 +114,7 @@ function JoinServerDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="auth-form" onClick={(e) => e.stopPropagation()} style={{ width: 440 }}>
+      <div className="auth-form" onClick={(e) => e.stopPropagation()} style={{ width: 440, animation: 'slideUp 0.3s ease' }}>
         <h1 style={{ fontSize: 20 }}>Server beitreten</h1>
         <p>Gib einen Einladungscode oder Link ein</p>
         {error && <div className="error-text">{error}</div>}
@@ -128,7 +128,7 @@ function JoinServerDialog({ onClose }: { onClose: () => void }) {
             autoFocus
           />
         </div>
-        <button className="btn" onClick={handleJoin} disabled={loading}>
+        <button className="btn-primary" style={{ width: '100%', padding: '10px 16px' }} onClick={handleJoin} disabled={loading}>
           {loading ? 'Beitreten...' : 'Beitreten'}
         </button>
       </div>

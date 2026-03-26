@@ -138,8 +138,8 @@ export function WikiView({ guildId }: Props) {
               placeholder="Inhalt (Markdown)"
             />
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button className="btn" style={{ width: 'auto' }} onClick={savePage}>Speichern</button>
-              <button className="btn-small" onClick={() => setEditing(false)}>Abbrechen</button>
+              <button className="btn-primary" style={{ width: 'auto' }} onClick={savePage}>Speichern</button>
+              <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: 13 }} onClick={() => setEditing(false)}>Abbrechen</button>
             </div>
           </div>
         ) : (

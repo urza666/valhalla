@@ -9,14 +9,16 @@ import (
 
 	"github.com/valhalla-chat/valhalla/internal/auth"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
+	"github.com/valhalla-chat/valhalla/pkg/permissions"
 )
 
 type Handler struct {
 	service *Service
+	perms   *permissions.Resolver
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, perms *permissions.Resolver) *Handler {
+	return &Handler{service: service, perms: perms}
 }
 
 // CreateThread handles POST /api/v1/channels/{channelID}/threads
@@ -34,8 +36,21 @@ func (h *Handler) CreateThread(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: resolve guildID from channel, check CREATE_PUBLIC_THREADS permission
-	t, err := h.service.CreateThread(r.Context(), channelID, 0, user.ID, req)
+	var guildID int64
+	if h.perms != nil {
+		ci, err := h.perms.GetChannelInfo(r.Context(), channelID)
+		if err != nil {
+			apierror.ErrNotFound.Write(w)
+			return
+		}
+		guildID = ci.GuildID
+		hasPerm, _ := h.perms.HasGuildPerm(r.Context(), user.ID, guildID, permissions.CreatePublicThreads)
+		if !hasPerm {
+			apierror.ErrForbidden.Write(w)
+			return
+		}
+	}
+	t, err := h.service.CreateThread(r.Context(), channelID, guildID, user.ID, req)
 	if err != nil {
 		apierror.NewBadRequest(err.Error()).Write(w)
 		return

@@ -11,15 +11,17 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/gateway"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
 	"github.com/valhalla-chat/valhalla/pkg/events"
+	"github.com/valhalla-chat/valhalla/pkg/permissions"
 )
 
 type Handler struct {
 	service  *Service
 	gwServer *gateway.Server
+	perms    *permissions.Resolver
 }
 
-func NewHandler(service *Service, gwServer *gateway.Server) *Handler {
-	return &Handler{service: service, gwServer: gwServer}
+func NewHandler(service *Service, gwServer *gateway.Server, perms *permissions.Resolver) *Handler {
+	return &Handler{service: service, gwServer: gwServer, perms: perms}
 }
 
 // JoinVoice handles POST /api/v1/channels/{channelID}/voice/join
@@ -31,7 +33,23 @@ func (h *Handler) JoinVoice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Check CONNECT permission, channel type = voice, user limit
+	// Check CONNECT permission and channel type
+	if h.perms != nil {
+		ci, err := h.perms.GetChannelInfo(r.Context(), channelID)
+		if err != nil {
+			apierror.ErrNotFound.Write(w)
+			return
+		}
+		if ci.Type != 2 { // 2 = voice channel
+			apierror.NewBadRequest("Not a voice channel").Write(w)
+			return
+		}
+		hasPerm, _ := h.perms.HasGuildPerm(r.Context(), user.ID, ci.GuildID, permissions.Connect)
+		if !hasPerm {
+			apierror.ErrForbidden.Write(w)
+			return
+		}
+	}
 
 	var req struct {
 		GuildID int64 `json:"guild_id,string"`

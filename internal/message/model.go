@@ -24,10 +24,34 @@ type Message struct {
 	Nonce           *string     `json:"nonce,omitempty"`
 	CreatedAt       time.Time   `json:"timestamp"`
 	// Populated separately
-	Mentions     []int64     `json:"mentions,omitempty"`
-	MentionRoles []int64     `json:"mention_roles,omitempty"`
-	Reactions    []Reaction  `json:"reactions,omitempty"`
-	Attachments  []Attachment `json:"attachments,omitempty"`
+	Mentions     []int64       `json:"mentions,omitempty"`
+	MentionRoles []int64       `json:"mention_roles,omitempty"`
+	Reactions    []Reaction    `json:"reactions,omitempty"`
+	Attachments  []Attachment  `json:"attachments,omitempty"`
+	Embeds       []MessageEmbed `json:"embeds,omitempty"`
+}
+
+type MessageEmbed struct {
+	Type        string       `json:"type"`
+	URL         string       `json:"url"`
+	Title       string       `json:"title,omitempty"`
+	Description string       `json:"description,omitempty"`
+	Color       int          `json:"color,omitempty"`
+	Thumbnail   *EmbedMedia  `json:"thumbnail,omitempty"`
+	Image       *EmbedMedia  `json:"image,omitempty"`
+	Provider    *EmbedProvider `json:"provider,omitempty"`
+	SiteName    string       `json:"site_name,omitempty"`
+}
+
+type EmbedMedia struct {
+	URL    string `json:"url"`
+	Width  int    `json:"width,omitempty"`
+	Height int    `json:"height,omitempty"`
+}
+
+type EmbedProvider struct {
+	Name string `json:"name,omitempty"`
+	URL  string `json:"url,omitempty"`
 }
 
 type Author struct {

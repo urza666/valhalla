@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/valhalla-chat/valhalla/pkg/permissions"
 	"github.com/valhalla-chat/valhalla/pkg/snowflake"
 )
@@ -36,35 +37,69 @@ func (s *Service) CreateGuild(ctx context.Context, ownerID int64, req CreateGuil
 
 	guildID := s.idGen.Generate().Int64()
 
-	g, err := s.repo.CreateGuild(ctx, guildID, req.Name, ownerID)
+	var g Guild
+	var everyoneRole Role
+	var channels []Channel
+
+	err := s.repo.WithTx(ctx, func(tx pgx.Tx) error {
+		// Create guild
+		err := tx.QueryRow(ctx, `
+			INSERT INTO guilds (id, name, owner_id)
+			VALUES ($1, $2, $3)
+			RETURNING id, name, icon_hash, banner_hash, owner_id, description,
+			          preferred_locale, verification_level, default_notifications,
+			          features, system_channel_id, max_members, created_at
+		`, guildID, req.Name, ownerID).Scan(
+			&g.ID, &g.Name, &g.IconHash, &g.BannerHash, &g.OwnerID, &g.Description,
+			&g.PreferredLocale, &g.VerificationLevel, &g.DefaultNotifications,
+			&g.Features, &g.SystemChannelID, &g.MaxMembers, &g.CreatedAt,
+		)
+		if err != nil {
+			return err
+		}
+
+		// Create @everyone role (ID = Guild ID, as per Discord convention)
+		err = tx.QueryRow(ctx, `
+			INSERT INTO roles (id, guild_id, name, permissions, position)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, guild_id, name, color, hoist, position, permissions, managed, mentionable
+		`, guildID, guildID, "everyone", int64(permissions.DefaultEveryone), 0).Scan(
+			&everyoneRole.ID, &everyoneRole.GuildID, &everyoneRole.Name, &everyoneRole.Color,
+			&everyoneRole.Hoist, &everyoneRole.Position, &everyoneRole.Permissions,
+			&everyoneRole.Managed, &everyoneRole.Mentionable,
+		)
+		if err != nil {
+			return err
+		}
+
+		// Add owner as member
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO members (user_id, guild_id) VALUES ($1, $2)
+			ON CONFLICT DO NOTHING
+		`, ownerID, guildID); err != nil {
+			return err
+		}
+
+		// Create default channels
+		channels, err = s.createDefaultChannelsTx(ctx, tx, guildID)
+		if err != nil {
+			return err
+		}
+
+		// Set system channel
+		if len(channels) > 0 {
+			if _, err := tx.Exec(ctx, `UPDATE guilds SET system_channel_id = $2 WHERE id = $1`, guildID, channels[0].ID); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// Create @everyone role (ID = Guild ID, as per Discord convention)
-	everyoneRole, err := s.repo.CreateRole(ctx, guildID, guildID, "everyone",
-		int64(permissions.DefaultEveryone), 0)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Add owner as member
-	if _, err := s.repo.AddMember(ctx, ownerID, guildID); err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Create default channels
-	channels, err := s.createDefaultChannels(ctx, guildID)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// Set system channel
-	if len(channels) > 0 {
-		s.repo.SetSystemChannel(ctx, guildID, channels[0].ID)
-	}
-
-	return g, []Role{*everyoneRole}, channels, nil
+	return &g, []Role{everyoneRole}, channels, nil
 }
 
 // Channel type used here to avoid circular import — minimal inline struct.
@@ -77,37 +112,33 @@ type Channel struct {
 	ParentID *int64 `json:"parent_id,string"`
 }
 
-func (s *Service) createDefaultChannels(ctx context.Context, guildID int64) ([]Channel, error) {
-	// Text Channels category
+func (s *Service) createDefaultChannelsTx(ctx context.Context, tx pgx.Tx, guildID int64) ([]Channel, error) {
 	catID := s.idGen.Generate().Int64()
-	if _, err := s.repo.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO channels (id, guild_id, type, name, position)
 		VALUES ($1, $2, 4, 'Text Channels', 0)
 	`, catID, guildID); err != nil {
 		return nil, err
 	}
 
-	// #general text channel
 	generalID := s.idGen.Generate().Int64()
-	if _, err := s.repo.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO channels (id, guild_id, type, name, position, parent_id)
 		VALUES ($1, $2, 0, 'general', 0, $3)
 	`, generalID, guildID, catID); err != nil {
 		return nil, err
 	}
 
-	// Voice Channels category
 	vCatID := s.idGen.Generate().Int64()
-	if _, err := s.repo.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO channels (id, guild_id, type, name, position)
 		VALUES ($1, $2, 4, 'Voice Channels', 1)
 	`, vCatID, guildID); err != nil {
 		return nil, err
 	}
 
-	// General voice channel
 	voiceID := s.idGen.Generate().Int64()
-	if _, err := s.repo.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO channels (id, guild_id, type, name, position, parent_id)
 		VALUES ($1, $2, 2, 'General', 0, $3)
 	`, voiceID, guildID, vCatID); err != nil {
@@ -190,12 +221,24 @@ func (s *Service) JoinGuild(ctx context.Context, userID int64, inviteCode string
 		return nil, nil, ErrAlreadyMember
 	}
 
-	member, err := s.repo.AddMember(ctx, userID, inv.GuildID)
+	var member *Member
+	err = s.repo.WithTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO members (user_id, guild_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+		`, userID, inv.GuildID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `UPDATE invites SET uses = uses + 1 WHERE code = $1`, inviteCode)
+		return err
+	})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	s.repo.UseInvite(ctx, inviteCode)
+	member, err = s.repo.GetMember(ctx, userID, inv.GuildID)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	g, err := s.repo.GetGuild(ctx, inv.GuildID)
 	if err != nil {
@@ -279,6 +322,14 @@ func (s *Service) BanMember(ctx context.Context, guildID, targetID, actorID int6
 	if targetID == g.OwnerID {
 		return errors.New("cannot ban the guild owner")
 	}
-	s.repo.RemoveMember(ctx, targetID, guildID)
-	return s.repo.CreateBan(ctx, guildID, targetID, actorID, reason)
+	return s.repo.WithTx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `DELETE FROM members WHERE user_id = $1 AND guild_id = $2`, targetID, guildID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO bans (guild_id, user_id, banned_by, reason) VALUES ($1, $2, $3, $4)
+			ON CONFLICT (guild_id, user_id) DO UPDATE SET reason = $4, banned_by = $3
+		`, guildID, targetID, actorID, reason)
+		return err
+	})
 }

@@ -209,6 +209,13 @@ func (s *Server) DispatchToUser(userID int64, eventName string, data any) {
 	}
 }
 
+// FindSession looks up a session by ID. Returns nil if not found.
+func (s *Server) FindSession(sessionID string) *Session {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.sessions[sessionID]
+}
+
 // SessionCount returns the number of active sessions.
 func (s *Server) SessionCount() int {
 	s.mu.RLock()

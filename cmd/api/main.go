@@ -28,10 +28,14 @@ import (
 	"github.com/valhalla-chat/valhalla/internal/guild"
 	"github.com/valhalla-chat/valhalla/internal/message"
 	"github.com/valhalla-chat/valhalla/internal/bot"
+	"github.com/valhalla-chat/valhalla/internal/compliance"
+	"github.com/valhalla-chat/valhalla/internal/embed"
 	"github.com/valhalla-chat/valhalla/internal/kanban"
 	"github.com/valhalla-chat/valhalla/internal/poll"
 	"github.com/valhalla-chat/valhalla/internal/search"
+	"github.com/valhalla-chat/valhalla/internal/sso"
 	"github.com/valhalla-chat/valhalla/internal/user"
+	"github.com/valhalla-chat/valhalla/pkg/permissions"
 	"github.com/valhalla-chat/valhalla/internal/thread"
 	"github.com/valhalla-chat/valhalla/internal/voice"
 	"github.com/valhalla-chat/valhalla/internal/wiki"
@@ -107,15 +111,18 @@ func main() {
 	}
 
 	// Domain services
+	permResolver := permissions.NewResolver(dbPool)
+
 	guildRepo := guild.NewRepository(dbPool)
 	guildService := guild.NewService(guildRepo, idGen)
-	guildHandler := guild.NewHandler(guildService)
+	guildHandler := guild.NewHandler(guildService, permResolver)
 
 	channelRepo := channel.NewRepository(dbPool)
 	channelHandler := channel.NewHandler(channelRepo, idGen)
 
+	embedService := embed.NewService()
 	messageRepo := message.NewRepository(dbPool)
-	messageHandler := message.NewHandler(messageRepo, idGen, dispatcher)
+	messageHandler := message.NewHandler(messageRepo, idGen, dispatcher, embedService, permResolver)
 
 	userService := user.NewService(dbPool)
 	userHandler := user.NewHandler(userService)
@@ -124,13 +131,13 @@ func main() {
 	dmHandler := dm.NewHandler(dmService)
 
 	threadService := thread.NewService(dbPool, idGen)
-	threadHandler := thread.NewHandler(threadService)
+	threadHandler := thread.NewHandler(threadService, permResolver)
 
 	searchService := search.NewService(cfg.MeiliURL, cfg.MeiliAPIKey)
-	searchHandler := search.NewHandler(searchService)
+	searchHandler := search.NewHandler(searchService, permResolver)
 
 	voiceService := voice.NewService(cfg.LiveKitHost, cfg.LiveKitAPIKey, cfg.LiveKitAPISecret)
-	voiceHandler := voice.NewHandler(voiceService, gwServer)
+	voiceHandler := voice.NewHandler(voiceService, gwServer, permResolver)
 
 	kanbanService := kanban.NewService(dbPool, idGen)
 	kanbanHandler := kanban.NewHandler(kanbanService)
@@ -143,6 +150,12 @@ func main() {
 
 	botService := bot.NewService(dbPool, idGen)
 	_ = botService // Used for token validation, handler routes below
+
+	complianceService := compliance.NewService(dbPool, idGen)
+	complianceHandler := compliance.NewHandler(complianceService)
+
+	ssoService := sso.NewService(dbPool, idGen)
+	ssoHandler := sso.NewHandler(ssoService, authService, authRepo, dbPool, idGen, cfg.SSOBaseURL, cfg.SSOFrontendURL)
 
 	// Router
 	r := chi.NewRouter()
@@ -195,6 +208,12 @@ func main() {
 			r.With(authLimiter).Post("/forgot-password", authHandler.ForgotPassword)
 			r.With(authLimiter).Post("/reset-password", authHandler.ResetPassword)
 			r.With(authLimiter).Post("/mfa/login", authHandler.MFALogin)
+
+			// SSO flows (public -- user is redirected here by IdP)
+			r.Get("/sso/oidc/{provider}", ssoHandler.OIDCRedirect)
+			r.Get("/sso/oidc/{provider}/callback", ssoHandler.OIDCCallback)
+			r.Get("/sso/saml/{provider}/metadata", ssoHandler.SAMLMetadata)
+			r.Post("/sso/saml/{provider}/acs", ssoHandler.SAMLAssertionConsumer)
 		})
 
 		// Invite preview (public)
@@ -258,6 +277,16 @@ func main() {
 				// Audit log
 				r.Get("/audit-logs", guildHandler.GetAuditLog)
 
+				// Compliance (DSGVO)
+				r.Get("/compliance/retention-policies", complianceHandler.GetRetentionPolicies)
+				r.Post("/compliance/retention-policies", complianceHandler.CreateRetentionPolicy)
+				r.Delete("/compliance/retention-policies/{policyID}", complianceHandler.DeleteRetentionPolicy)
+				r.Get("/compliance/legal-holds", complianceHandler.GetLegalHolds)
+				r.Post("/compliance/legal-holds", complianceHandler.CreateLegalHold)
+				r.Delete("/compliance/legal-holds/{holdID}", complianceHandler.ReleaseLegalHold)
+				r.Get("/compliance/exports", complianceHandler.GetExports)
+				r.Post("/compliance/exports", complianceHandler.RequestExport)
+
 				// Guild search
 				r.Get("/messages/search", searchHandler.SearchMessages)
 
@@ -267,7 +296,17 @@ func main() {
 				// Guild wiki
 				r.Get("/wiki", wikiHandler.GetGuildPages)
 				r.Post("/wiki", wikiHandler.CreatePage)
+
+				// SSO provider management (guild admin)
+				r.Get("/sso/providers", ssoHandler.GetProviders)
+				r.Post("/sso/providers", ssoHandler.CreateProvider)
+				r.Patch("/sso/providers/{providerID}", ssoHandler.ToggleProvider)
+				r.Delete("/sso/providers/{providerID}", ssoHandler.DeleteProvider)
 			})
+
+			// User consent (DSGVO)
+			r.Get("/users/@me/consent", complianceHandler.GetConsentSettings)
+			r.Put("/users/@me/consent", complianceHandler.UpdateConsentSetting)
 
 			// Voice state
 			r.Patch("/voice/state", voiceHandler.UpdateVoiceState)

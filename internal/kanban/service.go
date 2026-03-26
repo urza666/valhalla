@@ -65,8 +65,15 @@ func NewService(db *pgxpool.Pool, idGen *snowflake.Generator) *Service {
 
 func (s *Service) CreateBoard(ctx context.Context, channelID, guildID, userID int64, name string) (*Board, error) {
 	id := s.idGen.Generate().Int64()
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	var b Board
-	err := s.db.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO kanban_boards (id, channel_id, guild_id, name, created_by)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, channel_id, guild_id, name, created_by, created_at
@@ -77,7 +84,6 @@ func (s *Service) CreateBoard(ctx context.Context, channelID, guildID, userID in
 		return nil, err
 	}
 
-	// Create default buckets
 	defaults := []struct{ name, color string }{
 		{"To Do", "#6d6f78"},
 		{"In Progress", "#f0b232"},
@@ -85,13 +91,15 @@ func (s *Service) CreateBoard(ctx context.Context, channelID, guildID, userID in
 	}
 	for i, d := range defaults {
 		bucketID := s.idGen.Generate().Int64()
-		s.db.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO kanban_buckets (id, board_id, name, position, color)
 			VALUES ($1, $2, $3, $4, $5)
-		`, bucketID, id, d.name, i, d.color)
+		`, bucketID, id, d.name, i, d.color); err != nil {
+			return nil, err
+		}
 	}
 
-	return &b, nil
+	return &b, tx.Commit(ctx)
 }
 
 func (s *Service) GetBoard(ctx context.Context, boardID int64) (*Board, error) {
@@ -203,33 +211,54 @@ func (s *Service) CreateTask(ctx context.Context, boardID, bucketID, userID int6
 }
 
 func (s *Service) UpdateTask(ctx context.Context, taskID int64, updates map[string]any) (*Task, error) {
-	// Build dynamic SET clause for partial updates
-	// For simplicity, handle common fields
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	if title, ok := updates["title"].(string); ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET title = $2 WHERE id = $1`, taskID, title)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET title = $2 WHERE id = $1`, taskID, title); err != nil {
+			return nil, err
+		}
 	}
 	if desc, ok := updates["description"].(string); ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET description = $2 WHERE id = $1`, taskID, desc)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET description = $2 WHERE id = $1`, taskID, desc); err != nil {
+			return nil, err
+		}
 	}
 	if bucketID, ok := updates["bucket_id"]; ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET bucket_id = $2 WHERE id = $1`, taskID, bucketID)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET bucket_id = $2 WHERE id = $1`, taskID, bucketID); err != nil {
+			return nil, err
+		}
 	}
 	if position, ok := updates["position"]; ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET position = $2 WHERE id = $1`, taskID, position)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET position = $2 WHERE id = $1`, taskID, position); err != nil {
+			return nil, err
+		}
 	}
 	if priority, ok := updates["priority"]; ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET priority = $2 WHERE id = $1`, taskID, priority)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET priority = $2 WHERE id = $1`, taskID, priority); err != nil {
+			return nil, err
+		}
 	}
 	if completed, ok := updates["completed"].(bool); ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET completed = $2 WHERE id = $1`, taskID, completed)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET completed = $2 WHERE id = $1`, taskID, completed); err != nil {
+			return nil, err
+		}
 	}
 	if assignedTo, ok := updates["assigned_to"]; ok {
-		s.db.Exec(ctx, `UPDATE kanban_tasks SET assigned_to = $2 WHERE id = $1`, taskID, assignedTo)
+		if _, err := tx.Exec(ctx, `UPDATE kanban_tasks SET assigned_to = $2 WHERE id = $1`, taskID, assignedTo); err != nil {
+			return nil, err
+		}
 	}
 
-	// Return updated task
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
 	var t Task
-	err := s.db.QueryRow(ctx, `
+	err = s.db.QueryRow(ctx, `
 		SELECT id, bucket_id, board_id, title, description, position, priority,
 		       due_date, created_by, assigned_to, labels, completed, created_at, updated_at
 		FROM kanban_tasks WHERE id = $1

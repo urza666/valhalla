@@ -37,7 +37,7 @@ export function GifPicker({ onSelect, onClose }: Props) {
             Mehr Infos in unserer <a href="/datenschutz.html" target="_blank" style={{ color: 'var(--text-link)' }}>Datenschutzerklärung</a>.
           </p>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-            <button className="btn" style={{ width: 'auto', fontSize: 13 }} onClick={() => {
+            <button className="btn-primary" style={{ width: 'auto', fontSize: 13 }} onClick={() => {
               localStorage.setItem('gif_consent', 'true');
               setConsent(true);
             }}>

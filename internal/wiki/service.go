@@ -45,8 +45,16 @@ func NewService(db *pgxpool.Pool, idGen *snowflake.Generator) *Service {
 
 func (s *Service) CreatePage(ctx context.Context, guildID int64, channelID *int64, userID int64, title, content string, parentID *int64) (*Page, error) {
 	id := s.idGen.Generate().Int64()
+	revID := s.idGen.Generate().Int64()
+
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	var p Page
-	err := s.db.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO wiki_pages (id, guild_id, channel_id, title, content, parent_id, created_by, last_edited_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
 		RETURNING id, channel_id, guild_id, title, content, parent_id, position, created_by, last_edited_by, created_at, updated_at
@@ -58,12 +66,12 @@ func (s *Service) CreatePage(ctx context.Context, guildID int64, channelID *int6
 		return nil, err
 	}
 
-	// Save initial revision
-	revID := s.idGen.Generate().Int64()
-	s.db.Exec(ctx, `INSERT INTO wiki_revisions (id, page_id, content, edited_by) VALUES ($1, $2, $3, $4)`,
-		revID, id, content, userID)
+	if _, err := tx.Exec(ctx, `INSERT INTO wiki_revisions (id, page_id, content, edited_by) VALUES ($1, $2, $3, $4)`,
+		revID, id, content, userID); err != nil {
+		return nil, err
+	}
 
-	return &p, nil
+	return &p, tx.Commit(ctx)
 }
 
 func (s *Service) GetPage(ctx context.Context, pageID int64) (*Page, error) {
@@ -82,16 +90,30 @@ func (s *Service) GetPage(ctx context.Context, pageID int64) (*Page, error) {
 }
 
 func (s *Service) UpdatePage(ctx context.Context, pageID, userID int64, title, content *string) (*Page, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
 	if title != nil {
-		s.db.Exec(ctx, `UPDATE wiki_pages SET title = $2, last_edited_by = $3 WHERE id = $1`, pageID, *title, userID)
+		if _, err := tx.Exec(ctx, `UPDATE wiki_pages SET title = $2, last_edited_by = $3 WHERE id = $1`, pageID, *title, userID); err != nil {
+			return nil, err
+		}
 	}
 	if content != nil {
-		s.db.Exec(ctx, `UPDATE wiki_pages SET content = $2, last_edited_by = $3 WHERE id = $1`, pageID, *content, userID)
-
-		// Save revision
+		if _, err := tx.Exec(ctx, `UPDATE wiki_pages SET content = $2, last_edited_by = $3 WHERE id = $1`, pageID, *content, userID); err != nil {
+			return nil, err
+		}
 		revID := s.idGen.Generate().Int64()
-		s.db.Exec(ctx, `INSERT INTO wiki_revisions (id, page_id, content, edited_by) VALUES ($1, $2, $3, $4)`,
-			revID, pageID, *content, userID)
+		if _, err := tx.Exec(ctx, `INSERT INTO wiki_revisions (id, page_id, content, edited_by) VALUES ($1, $2, $3, $4)`,
+			revID, pageID, *content, userID); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
 	}
 	return s.GetPage(ctx, pageID)
 }

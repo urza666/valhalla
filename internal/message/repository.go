@@ -169,16 +169,25 @@ func (r *Repository) GetAuthorID(ctx context.Context, id int64) (int64, error) {
 // --- Reactions ---
 
 func (r *Repository) AddReaction(ctx context.Context, messageID, userID int64, emoji string) error {
-	// Enforce: only one reaction per user per message — remove any existing reaction first
-	_, _ = r.db.Exec(ctx, `
-		DELETE FROM reactions WHERE message_id = $1 AND user_id = $2
-	`, messageID, userID)
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-	_, err := r.db.Exec(ctx, `
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM reactions WHERE message_id = $1 AND user_id = $2
+	`, messageID, userID); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
 		INSERT INTO reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)
 		ON CONFLICT DO NOTHING
-	`, messageID, userID, emoji)
-	return err
+	`, messageID, userID, emoji); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *Repository) RemoveReaction(ctx context.Context, messageID, userID int64, emoji string) error {
@@ -285,6 +294,89 @@ func (r *Repository) GetPinnedMessages(ctx context.Context, channelID int64) ([]
 		messages = append(messages, msg)
 	}
 	return messages, nil
+}
+
+// --- Embeds ---
+
+// SaveEmbed stores a link preview embed for a message.
+func (r *Repository) SaveEmbed(ctx context.Context, id, messageID int64, e MessageEmbed) error {
+	var thumbURL *string
+	var thumbW, thumbH *int
+	if e.Thumbnail != nil {
+		thumbURL = &e.Thumbnail.URL
+		thumbW = &e.Thumbnail.Width
+		thumbH = &e.Thumbnail.Height
+	}
+	var imgURL *string
+	var imgW, imgH *int
+	if e.Image != nil {
+		imgURL = &e.Image.URL
+		imgW = &e.Image.Width
+		imgH = &e.Image.Height
+	}
+	var provName, provURL *string
+	if e.Provider != nil {
+		provName = &e.Provider.Name
+		provURL = &e.Provider.URL
+	}
+	_, err := r.db.Exec(ctx, `
+		INSERT INTO message_embeds (id, message_id, type, url, title, description, site_name, color,
+			thumbnail_url, thumbnail_width, thumbnail_height,
+			image_url, image_width, image_height,
+			provider_name, provider_url)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+	`, id, messageID, e.Type, e.URL, e.Title, e.Description, e.SiteName, e.Color,
+		thumbURL, thumbW, thumbH, imgURL, imgW, imgH, provName, provURL)
+	return err
+}
+
+// GetEmbeds fetches all embeds for a list of message IDs.
+func (r *Repository) GetEmbeds(ctx context.Context, messageIDs []int64) (map[int64][]MessageEmbed, error) {
+	if len(messageIDs) == 0 {
+		return nil, nil
+	}
+	rows, err := r.db.Query(ctx, `
+		SELECT message_id, type, url, title, description, site_name, color,
+		       thumbnail_url, thumbnail_width, thumbnail_height,
+		       image_url, image_width, image_height,
+		       provider_name, provider_url
+		FROM message_embeds WHERE message_id = ANY($1)
+		ORDER BY id
+	`, messageIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int64][]MessageEmbed)
+	for rows.Next() {
+		var msgID int64
+		var e MessageEmbed
+		var thumbURL, imgURL, provName, provURL *string
+		var thumbW, thumbH, imgW, imgH *int
+
+		if err := rows.Scan(&msgID, &e.Type, &e.URL, &e.Title, &e.Description, &e.SiteName, &e.Color,
+			&thumbURL, &thumbW, &thumbH, &imgURL, &imgW, &imgH, &provName, &provURL); err != nil {
+			return nil, err
+		}
+		if thumbURL != nil {
+			e.Thumbnail = &EmbedMedia{URL: *thumbURL}
+			if thumbW != nil { e.Thumbnail.Width = *thumbW }
+			if thumbH != nil { e.Thumbnail.Height = *thumbH }
+		}
+		if imgURL != nil {
+			e.Image = &EmbedMedia{URL: *imgURL}
+			if imgW != nil { e.Image.Width = *imgW }
+			if imgH != nil { e.Image.Height = *imgH }
+		}
+		if provName != nil || provURL != nil {
+			e.Provider = &EmbedProvider{}
+			if provName != nil { e.Provider.Name = *provName }
+			if provURL != nil { e.Provider.URL = *provURL }
+		}
+		result[msgID] = append(result[msgID], e)
+	}
+	return result, nil
 }
 
 // GetChannelGuildID resolves the guild_id for a channel.

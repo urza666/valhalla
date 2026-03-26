@@ -10,21 +10,26 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/valhalla-chat/valhalla/internal/auth"
+	"github.com/valhalla-chat/valhalla/internal/embed"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
 	"github.com/valhalla-chat/valhalla/pkg/events"
 	"github.com/valhalla-chat/valhalla/pkg/metrics"
+	"github.com/valhalla-chat/valhalla/pkg/permissions"
 	"github.com/valhalla-chat/valhalla/pkg/snowflake"
 )
 
 type Handler struct {
-	repo       *Repository
-	idGen      *snowflake.Generator
-	dispatcher events.EventDispatcher
-	uploadDir  string
+	repo         *Repository
+	idGen        *snowflake.Generator
+	dispatcher   events.EventDispatcher
+	uploadDir    string
+	embedService *embed.Service
+	perms        *permissions.Resolver
 }
 
 const maxUploadSize = 25 * 1024 * 1024 // 25 MB
@@ -40,10 +45,10 @@ var allowedExtensions = map[string]bool{
 	".json": true, ".xml": true, ".yaml": true, ".yml": true,
 }
 
-func NewHandler(repo *Repository, idGen *snowflake.Generator, dispatcher events.EventDispatcher) *Handler {
+func NewHandler(repo *Repository, idGen *snowflake.Generator, dispatcher events.EventDispatcher, embedSvc *embed.Service, perms *permissions.Resolver) *Handler {
 	uploadDir := "uploads"
 	os.MkdirAll(uploadDir, 0o755)
-	return &Handler{repo: repo, idGen: idGen, dispatcher: dispatcher, uploadDir: uploadDir}
+	return &Handler{repo: repo, idGen: idGen, dispatcher: dispatcher, uploadDir: uploadDir, embedService: embedSvc, perms: perms}
 }
 
 // isGuildMember checks if a user is a member of the given guild.
@@ -115,6 +120,16 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+
+		// Embeds (link previews)
+		embedMap, _ := h.repo.GetEmbeds(r.Context(), msgIDs)
+		if embedMap != nil {
+			for i := range messages {
+				if embs, ok := embedMap[messages[i].ID]; ok {
+					messages[i].Embeds = embs
+				}
+			}
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -172,6 +187,41 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		if atts, ok := attMap[msgID]; ok {
 			msg.Attachments = atts
 		}
+	}
+
+	// Extract link previews asynchronously (non-blocking)
+	if h.embedService != nil && len(req.Content) > 0 {
+		go func() {
+			bgCtx, bgCancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer bgCancel()
+			embeds := h.embedService.ExtractEmbeds(bgCtx, req.Content)
+			if len(embeds) > 0 {
+				var msgEmbeds []MessageEmbed
+				for _, e := range embeds {
+					me := MessageEmbed{
+						Type: e.Type, URL: e.URL, Title: e.Title,
+						Description: e.Description, Color: e.Color, SiteName: e.SiteName,
+					}
+					if e.Thumbnail != nil {
+						me.Thumbnail = &EmbedMedia{URL: e.Thumbnail.URL, Width: e.Thumbnail.Width, Height: e.Thumbnail.Height}
+					}
+					if e.Image != nil {
+						me.Image = &EmbedMedia{URL: e.Image.URL, Width: e.Image.Width, Height: e.Image.Height}
+					}
+					if e.Provider != nil {
+						me.Provider = &EmbedProvider{Name: e.Provider.Name, URL: e.Provider.URL}
+					}
+					embedID := h.idGen.Generate().Int64()
+					h.repo.SaveEmbed(bgCtx, embedID, msgID, me)
+					msgEmbeds = append(msgEmbeds, me)
+				}
+				// Dispatch embed update so clients see the previews
+				if h.dispatcher != nil {
+					msg.Embeds = msgEmbeds
+					h.dispatcher.DispatchToChannel(guildID, channelID, events.EventMessageUpdate, msg)
+				}
+			}
+		}()
 	}
 
 	// Dispatch MESSAGE_CREATE to all subscribers via WebSocket Gateway
@@ -246,9 +296,17 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if authorID != user.ID {
-		// TODO: check MANAGE_MESSAGES permission
-		apierror.ErrForbidden.Write(w)
-		return
+		guildID := h.repo.GetChannelGuildID(r.Context(), channelID)
+		if guildID != 0 && h.perms != nil {
+			hasPerm, _ := h.perms.HasGuildPerm(r.Context(), user.ID, guildID, permissions.ManageMessages)
+			if !hasPerm {
+				apierror.ErrForbidden.Write(w)
+				return
+			}
+		} else {
+			apierror.ErrForbidden.Write(w)
+			return
+		}
 	}
 
 	if err := h.repo.Delete(r.Context(), messageID); err != nil {

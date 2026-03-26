@@ -1,4 +1,4 @@
-.PHONY: all setup up down logs build run-api run-gateway migrate-up migrate-down test lint clean
+.PHONY: all setup up down logs build run-api run-gateway migrate-up migrate-down test lint clean check check-backend check-frontend
 
 # ─── Docker (recommended way to run) ─────────────────────
 
@@ -83,6 +83,50 @@ test-coverage: ## Run tests with coverage report
 
 lint: ## Run linter
 	golangci-lint run ./...
+
+lint-frontend: ## Run frontend typecheck (and eslint if configured)
+	cd web && npx tsc --noEmit
+	@if [ -f web/eslint.config.js ] || [ -f web/.eslintrc.json ] || [ -f web/.eslintrc.js ]; then \
+		cd web && npx eslint src/; \
+	else \
+		echo "No ESLint config — skipping (add web/eslint.config.js to enable)"; \
+	fi
+
+test-frontend: ## Run frontend tests (Vitest)
+	cd web && npm test
+
+security-go: ## Check Go dependencies for issues
+	go mod verify
+	@command -v govulncheck >/dev/null 2>&1 && govulncheck ./... || echo "govulncheck not installed — run: go install golang.org/x/vuln/cmd/govulncheck@latest"
+
+security-frontend: ## Audit frontend dependencies
+	cd web && npm audit --omit=dev || true
+
+check-backend: ## Run all backend quality gates
+	@echo "══ go vet ══"
+	go vet ./...
+	@echo "══ golangci-lint ══"
+	golangci-lint run ./...
+	@echo "══ go build ══"
+	go build ./...
+	@echo "══ go test (race) ══"
+	go test -race -count=1 -timeout 120s ./...
+	@echo "══ go mod verify ══"
+	go mod verify
+
+check-frontend: ## Run all frontend quality gates
+	@echo "══ npm ci ══"
+	cd web && npm ci
+	@echo "══ typecheck ══"
+	cd web && npx tsc --noEmit
+	@echo "══ vitest ══"
+	cd web && npm test
+	@echo "══ npm audit ══"
+	cd web && npm audit --omit=dev || true
+
+check: check-backend check-frontend ## Run ALL quality gates (mirrors CI)
+	@echo ""
+	@echo "✓ All quality gates passed"
 
 generate: ## Run code generators
 	go generate ./...

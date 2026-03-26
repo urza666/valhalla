@@ -45,13 +45,13 @@ export function OnboardingWizard({ onComplete }: Props) {
 
   return (
     <div className="modal-backdrop">
-      <div className="auth-form" style={{ textAlign: 'center' }}>
+      <div className="auth-form" style={{ textAlign: 'center', animation: 'slideUp 0.3s ease' }}>
         {step === 'welcome' && (
           <>
             <div style={{ fontSize: 48, marginBottom: 16 }}>⚔️</div>
             <h1>Willkommen bei Valhalla!</h1>
             <p style={{ marginBottom: 24 }}>Lass uns loslegen. Was möchtest du tun?</p>
-            <button className="btn" onClick={() => setStep('choice')}>Weiter</button>
+            <button className="btn-primary" style={{ width: '100%', padding: '10px 16px' }} onClick={() => setStep('choice')}>Weiter</button>
           </>
         )}
 
@@ -60,10 +60,10 @@ export function OnboardingWizard({ onComplete }: Props) {
             <h1>Wie möchtest du starten?</h1>
             <p style={{ marginBottom: 24 }}>Du kannst einen eigenen Server erstellen oder einem bestehenden beitreten.</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button className="btn" onClick={() => setStep('create')}>
+              <button className="btn-primary" style={{ width: '100%', padding: '10px 16px' }} onClick={() => setStep('create')}>
                 Server erstellen
               </button>
-              <button className="btn" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }} onClick={() => setStep('join')}>
+              <button className="btn-secondary" style={{ width: '100%', padding: '10px 16px' }} onClick={() => setStep('join')}>
                 Server beitreten
               </button>
               <button
@@ -93,8 +93,8 @@ export function OnboardingWizard({ onComplete }: Props) {
               />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }} onClick={() => setStep('choice')}>Zurück</button>
-              <button className="btn" onClick={handleCreate} disabled={loading || !serverName.trim()}>
+              <button className="btn-secondary" onClick={() => setStep('choice')}>Zurück</button>
+              <button className="btn-primary" onClick={handleCreate} disabled={loading || !serverName.trim()}>
                 {loading ? 'Erstellen...' : 'Erstellen'}
               </button>
             </div>
@@ -117,8 +117,8 @@ export function OnboardingWizard({ onComplete }: Props) {
               />
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" style={{ background: 'var(--bg-tertiary)', color: 'var(--text-primary)' }} onClick={() => setStep('choice')}>Zurück</button>
-              <button className="btn" onClick={handleJoin} disabled={loading || !inviteCode.trim()}>
+              <button className="btn-secondary" onClick={() => setStep('choice')}>Zurück</button>
+              <button className="btn-primary" onClick={handleJoin} disabled={loading || !inviteCode.trim()}>
                 {loading ? 'Beitreten...' : 'Beitreten'}
               </button>
             </div>

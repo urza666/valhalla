@@ -45,6 +45,10 @@ type Config struct {
 	LiveKitAPIKey    string `envconfig:"LIVEKIT_API_KEY" default:"devkey"`
 	LiveKitAPISecret string `envconfig:"LIVEKIT_API_SECRET" default:"devsecret"`
 
+	// SSO
+	SSOBaseURL string `envconfig:"SSO_BASE_URL" default:"http://localhost:8080"` // Public base URL for SSO callbacks
+	SSOFrontendURL string `envconfig:"SSO_FRONTEND_URL" default:"http://localhost:5173"` // Frontend redirect after SSO login
+
 	// CORS / WebSocket
 	AllowedOrigins string `envconfig:"ALLOWED_ORIGINS" default:"http://localhost:5173,http://localhost:3000"`
 

@@ -30,7 +30,7 @@ export function AuthPage() {
 
   return (
     <div className="auth-container">
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className="auth-form" onSubmit={handleSubmit} style={{ animation: 'slideUp 0.3s ease' }}>
         <h1>{isLogin ? 'Willkommen zurück!' : 'Konto erstellen'}</h1>
         <p>{isLogin ? 'Melde dich an, um Valhalla zu nutzen' : 'Tritt der Unterhaltung bei'}</p>
 
@@ -71,7 +71,7 @@ export function AuthPage() {
           />
         </div>
 
-        <button type="submit" className="btn" disabled={loading}>
+        <button type="submit" className="btn-primary" style={{ width: '100%', padding: '10px 16px', fontSize: 15 }} disabled={loading}>
           {loading ? 'Laden...' : isLogin ? 'Anmelden' : 'Registrieren'}
         </button>
 

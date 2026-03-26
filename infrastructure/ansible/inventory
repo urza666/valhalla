@@ -2,5 +2,5 @@
 dval01e ansible_host=# Vault: secret/data/valhalla → staging_ip ansible_user=root ansible_ssh_private_key_file=/home/urza/.ssh/id_ed25519
 
 [production]
-# Current prod runs on local docker (192.168.0.58)
-# dval01p ansible_host=192.168.0.58 ansible_user=urza
+# See Vault: secret/data/valhalla → production host details
+# dval01p ansible_host=<vault:production_ip> ansible_user=<vault:ssh_user>

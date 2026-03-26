@@ -47,7 +47,7 @@ export function ChannelSettings({ channel, onClose, onUpdate }: Props) {
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="settings-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+      <div className="settings-panel" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520, animation: 'fadeIn 0.2s ease' }}>
         <div className="settings-content" style={{ padding: 24 }}>
           <button className="settings-close" onClick={onClose}>ESC</button>
 
@@ -154,13 +154,13 @@ export function ChannelSettings({ channel, onClose, onUpdate }: Props) {
 
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <button
-              className="btn"
-              style={{ width: 'auto', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
+              className="btn-secondary"
+              style={{ width: 'auto' }}
               onClick={onClose}
             >
               Abbrechen
             </button>
-            <button className="btn" style={{ width: 'auto' }} onClick={save} disabled={saving}>
+            <button className="btn-primary" style={{ width: 'auto' }} onClick={save} disabled={saving}>
               {saving ? 'Speichern...' : 'Speichern'}
             </button>
           </div>

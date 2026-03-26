@@ -89,7 +89,7 @@ export function VoiceChannel({ channelId, guildId }: Props) {
       {usersInChannel.map((state) => {
         const info = userInfos.get(state.user_id) || { name: state.user_id.slice(-4), avatar: null };
         return (
-          <div key={state.user_id} className="voice-user">
+          <div key={state.user_id} className={`voice-user ${!state.self_mute && !state.self_deaf ? 'speaking' : ''}`}>
             <div className="voice-user-avatar">
               {info.avatar ? (
                 <img

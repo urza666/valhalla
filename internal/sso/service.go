@@ -164,6 +164,48 @@ func (s *Service) GetProvider(ctx context.Context, providerID int64) (*Provider,
 	return &p, nil
 }
 
+// GetProviderByGuildAndName looks up a provider by guild ID and name.
+func (s *Service) GetProviderByGuildAndName(ctx context.Context, guildID int64, name string) (*Provider, error) {
+	var p Provider
+	err := s.db.QueryRow(ctx, `
+		SELECT id, guild_id, type, name, enabled,
+		       saml_entity_id, saml_sso_url, saml_certificate,
+		       oidc_issuer, oidc_client_id, oidc_client_secret,
+		       auto_create_members, default_role_id, created_at
+		FROM sso_providers WHERE guild_id = $1 AND name = $2
+	`, guildID, name).Scan(
+		&p.ID, &p.GuildID, &p.Type, &p.Name, &p.Enabled,
+		&p.SAMLEntityID, &p.SAMLSSOURL, &p.SAMLCertificate,
+		&p.OIDCIssuer, &p.OIDCClientID, &p.OIDCClientSecret,
+		&p.AutoCreateMembers, &p.DefaultRoleID, &p.CreatedAt,
+	)
+	if err != nil {
+		return nil, ErrProviderNotFound
+	}
+	return &p, nil
+}
+
+// GetProviderFull retrieves a single SSO provider including secrets.
+func (s *Service) GetProviderFull(ctx context.Context, providerID int64) (*Provider, error) {
+	var p Provider
+	err := s.db.QueryRow(ctx, `
+		SELECT id, guild_id, type, name, enabled,
+		       saml_entity_id, saml_sso_url, saml_certificate,
+		       oidc_issuer, oidc_client_id, oidc_client_secret,
+		       auto_create_members, default_role_id, created_at
+		FROM sso_providers WHERE id = $1
+	`, providerID).Scan(
+		&p.ID, &p.GuildID, &p.Type, &p.Name, &p.Enabled,
+		&p.SAMLEntityID, &p.SAMLSSOURL, &p.SAMLCertificate,
+		&p.OIDCIssuer, &p.OIDCClientID, &p.OIDCClientSecret,
+		&p.AutoCreateMembers, &p.DefaultRoleID, &p.CreatedAt,
+	)
+	if err != nil {
+		return nil, ErrProviderNotFound
+	}
+	return &p, nil
+}
+
 // DeleteProvider removes an SSO provider.
 func (s *Service) DeleteProvider(ctx context.Context, providerID int64) error {
 	_, err := s.db.Exec(ctx, `DELETE FROM sso_providers WHERE id = $1`, providerID)

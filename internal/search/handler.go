@@ -9,19 +9,21 @@ import (
 
 	"github.com/valhalla-chat/valhalla/internal/auth"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
+	"github.com/valhalla-chat/valhalla/pkg/permissions"
 )
 
 type Handler struct {
 	service *Service
+	perms   *permissions.Resolver
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, perms *permissions.Resolver) *Handler {
+	return &Handler{service: service, perms: perms}
 }
 
 // SearchMessages handles GET /api/v1/guilds/{guildID}/messages/search
 func (h *Handler) SearchMessages(w http.ResponseWriter, r *http.Request) {
-	_ = auth.UserFromContext(r.Context())
+	user := auth.UserFromContext(r.Context())
 	guildID, err := strconv.ParseInt(chi.URLParam(r, "guildID"), 10, 64)
 	if err != nil {
 		apierror.ErrNotFound.Write(w)
@@ -50,7 +52,14 @@ func (h *Handler) SearchMessages(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	offset, _ := strconv.Atoi(r.URL.Query().Get("offset"))
 
-	// TODO: membership + permission check
+	// Membership check
+	if h.perms != nil {
+		isMember, _ := h.perms.IsMember(r.Context(), user.ID, guildID)
+		if !isMember {
+			apierror.ErrForbidden.Write(w)
+			return
+		}
+	}
 
 	result, err := h.service.Search(r.Context(), query, guildID, channelID, authorID, limit, offset)
 	if err != nil {

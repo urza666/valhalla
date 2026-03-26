@@ -166,7 +166,7 @@ export function KanbanBoard({ channelId, guildId }: Props) {
             ))}
           </div>
         )}
-        <button className="btn" style={{ width: 'auto' }} onClick={createBoard}>Board erstellen</button>
+        <button className="btn-primary" style={{ width: 'auto' }} onClick={createBoard}>Board erstellen</button>
       </div>
     );
   }
@@ -478,10 +478,10 @@ function TaskDetailModal({ task, members, onClose, onSave, onDelete }: {
           <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between' }}>
             <button className="btn-small danger" onClick={onDelete}>Aufgabe löschen</button>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" style={{ width: 'auto', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }} onClick={onClose}>
+              <button className="btn-secondary" style={{ width: 'auto' }} onClick={onClose}>
                 Abbrechen
               </button>
-              <button className="btn" style={{ width: 'auto' }} onClick={handleSave}>
+              <button className="btn-primary" style={{ width: 'auto' }} onClick={handleSave}>
                 Speichern
               </button>
             </div>

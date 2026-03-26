@@ -158,7 +158,7 @@ export function CreatePollDialog({ onClose, channelId }: { onClose: () => void; 
         </div>
 
         {error && <div className="error-text">{error}</div>}
-        <button className="btn" onClick={create} disabled={creating}>
+        <button className="btn-primary" style={{ width: '100%' }} onClick={create} disabled={creating}>
           {creating ? 'Erstelle...' : 'Umfrage erstellen'}
         </button>
       </div>

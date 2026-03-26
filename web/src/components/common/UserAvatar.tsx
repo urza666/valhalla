@@ -113,7 +113,7 @@ export function UserAvatar({
           height: statusDotSize,
           borderRadius: '50%',
           background: STATUS_COLORS[status] || '#80848e',
-          border: `${Math.max(statusDotSize * 0.2, 2)}px solid var(--bg-secondary, #2b2d31)`,
+          border: `${Math.max(statusDotSize * 0.2, 2)}px solid var(--bg-secondary)`,
         }} />
       )}
     </div>

@@ -270,22 +270,28 @@ func (s *Service) ResetPassword(ctx context.Context, token, newPassword string) 
 		return errors.New("invalid or expired token")
 	}
 
-	// Hash new password
 	hash, err := hashPassword(newPassword)
 	if err != nil {
 		return err
 	}
 
-	// Update password
-	s.db.Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1`, userID, hash)
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
 
-	// Mark token as used
-	s.db.Exec(ctx, `UPDATE password_resets SET used = true WHERE token = $1`, token)
+	if _, err := tx.Exec(ctx, `UPDATE users SET password_hash = $2 WHERE id = $1`, userID, hash); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE password_resets SET used = true WHERE token = $1`, token); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM sessions WHERE user_id = $1`, userID); err != nil {
+		return err
+	}
 
-	// Invalidate all sessions
-	s.db.Exec(ctx, `DELETE FROM sessions WHERE user_id = $1`, userID)
-
-	return nil
+	return tx.Commit(ctx)
 }
 
 func validateEmail(email string) error {

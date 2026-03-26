@@ -10,14 +10,16 @@ import (
 
 	"github.com/valhalla-chat/valhalla/internal/auth"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
+	"github.com/valhalla-chat/valhalla/pkg/permissions"
 )
 
 type Handler struct {
 	service *Service
+	perms   *permissions.Resolver
 }
 
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, perms *permissions.Resolver) *Handler {
+	return &Handler{service: service, perms: perms}
 }
 
 // CreateGuild handles POST /api/v1/guilds
@@ -227,8 +229,13 @@ func (h *Handler) CreateRole(w http.ResponseWriter, r *http.Request) {
 		req.Name = "new role"
 	}
 
-	// TODO: check MANAGE_ROLES permission
-	_ = user
+	if h.perms != nil {
+		hasPerm, _ := h.perms.HasGuildPerm(r.Context(), user.ID, guildID, permissions.ManageRoles)
+		if !hasPerm {
+			apierror.ErrForbidden.Write(w)
+			return
+		}
+	}
 
 	roleID := h.service.idGen.Generate().Int64()
 	// Get next position
