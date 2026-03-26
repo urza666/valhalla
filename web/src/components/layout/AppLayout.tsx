@@ -51,6 +51,7 @@ export function AppLayout() {
 
   return (
     <div className={`app-layout ${showChannels ? 'show-channels' : ''}`} role="application">
+      <a href="#main-content" className="skip-nav">Zum Inhalt springen</a>
       {/* Guild sidebar (leftmost) */}
       <GuildSidebar
         guilds={guilds}

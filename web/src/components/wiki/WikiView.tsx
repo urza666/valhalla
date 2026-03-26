@@ -102,6 +102,9 @@ export function WikiView({ guildId }: Props) {
               key={p.id}
               className={`wiki-page-item ${activePage?.id === p.id ? 'active' : ''}`}
               onClick={() => loadPage(p.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter') loadPage(p.id); }}
             >
               {p.title}
             </div>

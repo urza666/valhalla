@@ -64,7 +64,7 @@ export function ChatView({ channelId }: Props) {
   }, [channelId]);
 
   return (
-    <main className="chat-area">
+    <main className="chat-area" id="main-content">
       <header className="chat-header">
         <button
           className="mobile-menu-btn"
@@ -107,7 +107,7 @@ export function ChatView({ channelId }: Props) {
 
       {/* Chat view */}
       {viewMode === 'chat' && <>
-      <div className="messages-container">
+      <div className="messages-container" role="log" aria-live="polite" aria-label="Nachrichten">
         {channelMessages.length === 0 ? (
           <div className="empty-state">
             <h2>Willkommen in #{channel?.name}</h2>

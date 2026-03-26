@@ -201,6 +201,11 @@ function ChannelItem({ channel, active, onClick, guildId, onContextMenu }: {
         className={`channel-item ${active && !isVoice ? 'active' : ''} ${isVoiceActive ? 'active' : ''} ${unreadCount > 0 ? 'unread' : ''}`}
         onClick={handleClick}
         onContextMenu={onContextMenu}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(); } }}
+        aria-label={`${isVoice ? 'Sprachkanal' : 'Textkanal'}: ${channel.name}${unreadCount > 0 ? `, ${unreadCount} ungelesen` : ''}`}
+        aria-current={active ? 'true' : undefined}
       >
         <span className="hash">{icon}</span>
         <span style={{ flex: 1 }}>{channel.name}</span>

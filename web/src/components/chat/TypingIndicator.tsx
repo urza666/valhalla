@@ -83,15 +83,20 @@ export function TypingIndicator({ channelId }: Props) {
           : 'Mehrere Personen tippen...';
 
   return (
-    <div style={{
-      padding: '0 16px 4px',
-      fontSize: 12,
-      color: 'var(--text-muted)',
-      height: 20,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-    }}>
+    <div
+      role="status"
+      aria-live="polite"
+      aria-label={text}
+      style={{
+        padding: '0 16px 4px',
+        fontSize: 12,
+        color: 'var(--text-muted)',
+        height: 20,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 4,
+      }}
+    >
       <TypingDots />
       <span>{text}</span>
     </div>
