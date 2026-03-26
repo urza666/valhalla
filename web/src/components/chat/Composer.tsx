@@ -1,16 +1,16 @@
 import { useCallback, useRef, useState } from 'react';
 import { api } from '../../api/client';
-
-// Common emoji quick picks
-const QUICK_EMOJIS = ['👍', '❤️', '😂', '🎉', '🔥', '👀', '💯', '✅', '❌', '🤔', '😍', '🙌', '💀', '🫡', '👋', '🥳'];
+import { EmojiPicker } from './EmojiPicker';
 
 interface Props {
   channelId: string;
   channelName: string;
   onTyping: () => void;
+  replyToId?: string;
+  onReplySent?: () => void;
 }
 
-export function Composer({ channelId, channelName, onTyping }: Props) {
+export function Composer({ channelId, channelName, onTyping, replyToId, onReplySent }: Props) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
@@ -21,8 +21,9 @@ export function Composer({ channelId, channelName, onTyping }: Props) {
     if (!text || sending) return;
     setSending(true);
     try {
-      await api.sendMessage(channelId, text);
+      await api.sendMessage(channelId, text, replyToId);
       setInput('');
+      if (onReplySent) onReplySent();
       // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
@@ -61,15 +62,10 @@ export function Composer({ channelId, channelName, onTyping }: Props) {
     <div className="composer-wrapper">
       {/* Emoji picker */}
       {showEmoji && (
-        <div className="emoji-picker">
-          <div className="emoji-picker-grid">
-            {QUICK_EMOJIS.map((emoji) => (
-              <button key={emoji} className="emoji-btn" onClick={() => insertEmoji(emoji)}>
-                {emoji}
-              </button>
-            ))}
-          </div>
-        </div>
+        <EmojiPicker
+          onSelect={insertEmoji}
+          onClose={() => setShowEmoji(false)}
+        />
       )}
 
       <div className="composer">
@@ -82,6 +78,23 @@ export function Composer({ channelId, channelName, onTyping }: Props) {
         >
           😀
         </button>
+
+        {/* File upload */}
+        <label className="composer-action" title="Datei hochladen" style={{ cursor: 'pointer' }}>
+          📎
+          <input
+            type="file"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) {
+                // TODO: Upload file via API and attach to message
+                alert(`Datei "${file.name}" ausgewaehlt (Upload kommt bald)`);
+              }
+              e.target.value = '';
+            }}
+          />
+        </label>
 
         {/* Text input */}
         <textarea

@@ -354,6 +354,77 @@ body {
   background: rgba(255,255,255,0.06);
 }
 
+/* Full Emoji Picker */
+.emoji-picker-full {
+  position: absolute;
+  bottom: 100%;
+  left: 16px;
+  margin-bottom: 8px;
+  width: 352px;
+  max-height: 360px;
+  background: var(--bg-floating);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.emoji-search {
+  padding: 12px 12px 8px;
+}
+
+.emoji-search input {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.emoji-categories {
+  display: flex;
+  gap: 0;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.emoji-cat-btn {
+  flex: 1;
+  padding: 6px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 18px;
+  cursor: pointer;
+  opacity: 0.5;
+}
+
+.emoji-cat-btn.active { opacity: 1; border-bottom-color: var(--brand-primary); }
+.emoji-cat-btn:hover { opacity: 0.8; }
+
+.emoji-cat-label {
+  padding: 8px 12px 4px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+  padding: 4px 8px 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
 /* User panel */
 .user-panel {
   padding: 8px;
@@ -496,6 +567,119 @@ body {
   margin-bottom: 12px;
 }
 
+/* Message Actions */
+.msg-action-bar {
+  position: absolute;
+  top: -14px;
+  right: 16px;
+  display: flex;
+  gap: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  overflow: hidden;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.msg-action-bar button {
+  width: 32px;
+  height: 28px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.msg-action-bar button:hover { background: rgba(255,255,255,0.06); }
+
+.message.editing { background: rgba(88,101,242,0.06); }
+
+.msg-edit-wrapper { margin-top: 4px; }
+
+.msg-edit-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--brand-primary);
+  border-radius: 4px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 15px;
+  font-family: var(--font-primary);
+  resize: none;
+  outline: none;
+}
+
+.msg-edit-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.message-edited {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+}
+
+/* Reply */
+.reply-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-top: 2px solid var(--brand-primary);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.reply-banner button {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+.reply-banner button:hover { color: var(--text-primary); }
+
+.msg-reply-ref {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.msg-reply-author { color: var(--brand-primary); }
+
+/* Reactions */
+.msg-reactions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.msg-reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.03);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.msg-reaction:hover { border-color: var(--brand-primary); background: rgba(88,101,242,0.1); }
+.msg-reaction.me { border-color: var(--brand-primary); background: rgba(88,101,242,0.15); }
+
 /* Markdown */
 .md-code {
   background: var(--bg-tertiary);
@@ -561,6 +745,14 @@ body {
 
 .md-mention:hover {
   background: rgba(88, 101, 242, 0.5);
+}
+
+.md-inline-img {
+  max-width: 400px;
+  max-height: 300px;
+  border-radius: 4px;
+  margin-top: 4px;
+  display: block;
 }
 
 /* LiveKit Video/Screenshare */

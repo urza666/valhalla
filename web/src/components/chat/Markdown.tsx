@@ -47,9 +47,15 @@ function parseMarkdown(text: string): string {
   // Block quotes (> text)
   html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="md-quote">$1</blockquote>');
 
-  // Links (auto-detect URLs)
+  // Image URLs (render as inline images)
   html = html.replace(
-    /(?<!")https?:\/\/[^\s<]+/g,
+    /(?<!")https?:\/\/[^\s<]+\.(png|jpg|jpeg|gif|webp)(\?[^\s<]*)?/gi,
+    '<br/><a href="$&" target="_blank"><img src="$&" class="md-inline-img" loading="lazy" alt="" /></a>'
+  );
+
+  // Links (auto-detect remaining URLs)
+  html = html.replace(
+    /(?<!")(?<!src=")https?:\/\/[^\s<]+/g,
     '<a href="$&" target="_blank" rel="noopener noreferrer" class="md-link">$&</a>'
   );
 
