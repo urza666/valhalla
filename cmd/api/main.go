@@ -147,7 +147,7 @@ func main() {
 	auditLogger := middleware.NewAuditLogger(dbPool, idGen)
 	r.Use(auditLogger.Log)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:*", "https://localhost:*"},
+		AllowedOrigins:   strings.Split(cfg.AllowedOrigins, ","),
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Authorization", "Content-Type"},
 		AllowCredentials: true,
