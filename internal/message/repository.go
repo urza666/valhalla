@@ -217,3 +217,13 @@ func (r *Repository) AckMessage(ctx context.Context, userID, channelID, messageI
 	`, userID, channelID, messageID)
 	return err
 }
+
+// GetChannelGuildID resolves the guild_id for a channel.
+func (r *Repository) GetChannelGuildID(ctx context.Context, channelID int64) int64 {
+	var guildID *int64
+	r.db.QueryRow(ctx, `SELECT guild_id FROM channels WHERE id = $1`, channelID).Scan(&guildID)
+	if guildID != nil {
+		return *guildID
+	}
+	return 0
+}

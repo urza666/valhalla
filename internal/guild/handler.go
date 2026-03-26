@@ -185,8 +185,11 @@ func (h *Handler) CreateInvite(w http.ResponseWriter, r *http.Request) {
 	}
 	json.NewDecoder(r.Body).Decode(&body)
 
-	// TODO: resolve guildID from channelID properly
-	inv, err := h.service.CreateInvite(r.Context(), 0, channelID, user.ID, body.MaxAge, body.MaxUses)
+	// Resolve guildID from channel
+	var guildID int64
+	h.service.repo.db.QueryRow(r.Context(), `SELECT COALESCE(guild_id, 0) FROM channels WHERE id = $1`, channelID).Scan(&guildID)
+
+	inv, err := h.service.CreateInvite(r.Context(), guildID, channelID, user.ID, body.MaxAge, body.MaxUses)
 	if err != nil {
 		handleGuildError(w, err)
 		return

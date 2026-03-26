@@ -88,9 +88,9 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Dispatch MESSAGE_CREATE to all subscribers via WebSocket Gateway
-	// TODO: resolve guildID from channel
+	guildID := h.repo.GetChannelGuildID(r.Context(), channelID)
 	if h.gwServer != nil {
-		h.gwServer.DispatchToChannel(0, channelID, events.EventMessageCreate, msg)
+		h.gwServer.DispatchToChannel(guildID, channelID, events.EventMessageCreate, msg)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -131,7 +131,8 @@ func (h *Handler) UpdateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.gwServer != nil {
-		h.gwServer.DispatchToChannel(0, msg.ChannelID, events.EventMessageUpdate, msg)
+		gID := h.repo.GetChannelGuildID(r.Context(), msg.ChannelID)
+		h.gwServer.DispatchToChannel(gID, msg.ChannelID, events.EventMessageUpdate, msg)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -166,7 +167,8 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.gwServer != nil {
-		h.gwServer.DispatchToChannel(0, channelID, events.EventMessageDelete, map[string]any{
+		delGuildID := h.repo.GetChannelGuildID(r.Context(), channelID)
+		h.gwServer.DispatchToChannel(delGuildID, channelID, events.EventMessageDelete, map[string]any{
 			"id":         strconv.FormatInt(messageID, 10),
 			"channel_id": strconv.FormatInt(channelID, 10),
 		})
@@ -188,7 +190,8 @@ func (h *Handler) AddReaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.gwServer != nil {
-		h.gwServer.DispatchToChannel(0, channelID, events.EventMessageReactionAdd, map[string]any{
+		rGuildID := h.repo.GetChannelGuildID(r.Context(), channelID)
+		h.gwServer.DispatchToChannel(rGuildID, channelID, events.EventMessageReactionAdd, map[string]any{
 			"user_id":    strconv.FormatInt(user.ID, 10),
 			"channel_id": strconv.FormatInt(channelID, 10),
 			"message_id": strconv.FormatInt(messageID, 10),
@@ -212,7 +215,8 @@ func (h *Handler) RemoveReaction(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.gwServer != nil {
-		h.gwServer.DispatchToChannel(0, channelID, events.EventMessageReactionRemove, map[string]any{
+		rrGuildID := h.repo.GetChannelGuildID(r.Context(), channelID)
+		h.gwServer.DispatchToChannel(rrGuildID, channelID, events.EventMessageReactionRemove, map[string]any{
 			"user_id":    strconv.FormatInt(user.ID, 10),
 			"channel_id": strconv.FormatInt(channelID, 10),
 			"message_id": strconv.FormatInt(messageID, 10),

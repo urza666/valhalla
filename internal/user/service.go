@@ -65,34 +65,31 @@ func (s *Service) UpdateProfile(ctx context.Context, userID int64, req UpdatePro
 	}
 
 	// Return updated user
-	var user map[string]any
 	row := s.db.QueryRow(ctx, `
 		SELECT id, username, display_name, email, avatar_hash, bio, locale,
-		       mfa_enabled, verified, flags, premium_type, created_at
+		       mfa_enabled, verified, flags, premium_type, created_at::text
 		FROM users WHERE id = $1
 	`, userID)
 
-	var id int64
-	var username, email, locale string
+	var uid int64
+	var username, email, locale, createdAt string
 	var displayName, avatarHash, bio *string
 	var mfaEnabled, verified bool
 	var flags int64
 	var premiumType int
-	var createdAt string
 
-	err := row.Scan(&id, &username, &displayName, &email, &avatarHash, &bio, &locale,
+	err := row.Scan(&uid, &username, &displayName, &email, &avatarHash, &bio, &locale,
 		&mfaEnabled, &verified, &flags, &premiumType, &createdAt)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 
-	user = map[string]any{
-		"id": id, "username": username, "display_name": displayName,
+	return map[string]any{
+		"id": uid, "username": username, "display_name": displayName,
 		"email": email, "avatar": avatarHash, "bio": bio, "locale": locale,
 		"mfa_enabled": mfaEnabled, "verified": verified, "flags": flags,
 		"premium_type": premiumType, "created_at": createdAt,
-	}
-	return user, nil
+	}, nil
 }
 
 // ChangePassword verifies current password and sets new one.

@@ -46,8 +46,15 @@ function OverviewTab({ guild, onUpdate }: { guild: Guild; onUpdate: (g: Guild) =
   const save = async () => {
     setSaving(true);
     try {
-      const updated = await api.getGuild(guild.id); // PATCH would be: api.updateGuild
-      onUpdate({ ...updated, name });
+      const res = await fetch(`/api/v1/guilds/${guild.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: JSON.stringify({ name }),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        onUpdate(updated);
+      }
     } catch { /* ignore */ }
     setSaving(false);
   };
