@@ -1,0 +1,111 @@
+stages:
+  - lint
+  - test
+  - build
+  - deploy
+
+variables:
+  GOVERSION: "1.22"
+  NODE_VERSION: "22"
+
+# ═══ Backend ════════════════════════════════════════════
+
+go-vet:
+  stage: lint
+  image: golang:${GOVERSION}-alpine
+  script:
+    - go mod download
+    - go vet ./...
+  cache:
+    key: go-mod-${CI_COMMIT_REF_SLUG}
+    paths:
+      - /go/pkg/mod/
+
+go-test:
+  stage: test
+  image: golang:${GOVERSION}-alpine
+  script:
+    - go mod download
+    - go test -race -count=1 -timeout 120s ./internal/... ./pkg/...
+  cache:
+    key: go-mod-${CI_COMMIT_REF_SLUG}
+    paths:
+      - /go/pkg/mod/
+
+go-build:
+  stage: build
+  image: golang:${GOVERSION}-alpine
+  script:
+    - CGO_ENABLED=0 go build -ldflags="-s -w" -o /dev/null ./cmd/api
+  cache:
+    key: go-mod-${CI_COMMIT_REF_SLUG}
+    paths:
+      - /go/pkg/mod/
+
+# ═══ Frontend ═══════════════════════════════════════════
+
+frontend-typecheck:
+  stage: lint
+  image: node:${NODE_VERSION}-alpine
+  script:
+    - cd web
+    - npm ci --prefer-offline
+    - npx tsc --noEmit
+  cache:
+    key: npm-${CI_COMMIT_REF_SLUG}
+    paths:
+      - web/node_modules/
+
+frontend-build:
+  stage: build
+  image: node:${NODE_VERSION}-alpine
+  script:
+    - cd web
+    - npm ci --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - web/dist/
+    expire_in: 1 hour
+  cache:
+    key: npm-${CI_COMMIT_REF_SLUG}
+    paths:
+      - web/node_modules/
+
+# ═══ Docker Images ══════════════════════════════════════
+
+docker-api:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    - main
+  script:
+    - docker build -f deployments/Dockerfile -t valhalla-api:${CI_COMMIT_SHORT_SHA} .
+    - docker tag valhalla-api:${CI_COMMIT_SHORT_SHA} valhalla-api:latest
+
+docker-web:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  only:
+    - main
+  script:
+    - docker build -f deployments/Dockerfile.web -t valhalla-web:${CI_COMMIT_SHORT_SHA} .
+    - docker tag valhalla-web:${CI_COMMIT_SHORT_SHA} valhalla-web:latest
+
+# ═══ Deploy (manual gate) ══════════════════════════════
+
+deploy-production:
+  stage: deploy
+  only:
+    - main
+  when: manual
+  script:
+    - echo "Deploying ${CI_COMMIT_SHORT_SHA} to production..."
+    - ssh deploy@${DEPLOY_HOST} "cd /opt/valhalla && git pull && docker compose build && docker compose up -d"
+  environment:
+    name: production
+    url: https://${DEPLOY_HOST}

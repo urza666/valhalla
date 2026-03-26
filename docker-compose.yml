@@ -105,7 +105,7 @@ services:
 
   # ─── NATS + JetStream ────────────────────────────────────
   nats:
-    image: nats:2-alpine
+    image: nats:2.10-alpine
     command: >
       --jetstream
       --store_dir /data
@@ -123,7 +123,7 @@ services:
 
   # ─── LiveKit (Voice/Video SFU) ───────────────────────────
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.7
     ports:
       - "${LK_TCP_PORT:-7891}:7881"       # WebRTC TCP
       - "${LK_UDP_PORT:-7892}:7882/udp"   # WebRTC UDP
@@ -139,7 +139,7 @@ services:
 
   # ─── MinIO (S3-compatible Object Storage) ─────────────────
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2024-10-02T17-50-41Z
     command: server /data --console-address ":9001"
     ports:
       - "${MINIO_CONSOLE_PORT:-9001}:9001"

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Markdown } from '../chat/Markdown';
+import { toast } from '../../stores/toast';
 
 const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -32,21 +33,27 @@ export function WikiView({ guildId }: Props) {
   }, [guildId]);
 
   const loadPage = async (pageId: string) => {
-    const res = await fetch(`/api/v1/wiki/${pageId}`, { headers: headers() });
-    const page = await res.json();
-    setActivePage(page);
-    setEditing(false);
+    try {
+      const res = await fetch(`/api/v1/wiki/${pageId}`, { headers: headers() });
+      if (!res.ok) throw new Error();
+      const page = await res.json();
+      setActivePage(page);
+      setEditing(false);
+    } catch { toast.error('Seite konnte nicht geladen werden'); }
   };
 
   const createPage = async () => {
-    const res = await fetch(`/api/v1/guilds/${guildId}/wiki`, {
-      method: 'POST', headers: headers(),
-      body: JSON.stringify({ title: 'Neue Seite', content: '# Neue Seite\n\nInhalt hier...' }),
-    });
-    const page = await res.json();
-    setPages([...pages, page]);
-    setActivePage(page);
-    startEdit(page);
+    try {
+      const res = await fetch(`/api/v1/guilds/${guildId}/wiki`, {
+        method: 'POST', headers: headers(),
+        body: JSON.stringify({ title: 'Neue Seite', content: '# Neue Seite\n\nInhalt hier...' }),
+      });
+      if (!res.ok) throw new Error();
+      const page = await res.json();
+      setPages([...pages, page]);
+      setActivePage(page);
+      startEdit(page);
+    } catch { toast.error('Seite konnte nicht erstellt werden'); }
   };
 
   const startEdit = (page: WikiPage) => {
@@ -57,21 +64,28 @@ export function WikiView({ guildId }: Props) {
 
   const savePage = async () => {
     if (!activePage) return;
-    await fetch(`/api/v1/wiki/${activePage.id}`, {
-      method: 'PATCH', headers: headers(),
-      body: JSON.stringify({ title: editTitle, content: editContent }),
-    });
-    const updated = { ...activePage, title: editTitle, content: editContent };
-    setActivePage(updated);
-    setPages(pages.map((p) => p.id === updated.id ? { ...p, title: updated.title } : p));
-    setEditing(false);
+    try {
+      const res = await fetch(`/api/v1/wiki/${activePage.id}`, {
+        method: 'PATCH', headers: headers(),
+        body: JSON.stringify({ title: editTitle, content: editContent }),
+      });
+      if (!res.ok) throw new Error();
+      const updated = { ...activePage, title: editTitle, content: editContent };
+      setActivePage(updated);
+      setPages(pages.map((p) => p.id === updated.id ? { ...p, title: updated.title } : p));
+      setEditing(false);
+      toast.success('Seite gespeichert');
+    } catch { toast.error('Seite konnte nicht gespeichert werden'); }
   };
 
   const deletePage = async (pageId: string) => {
     if (!confirm('Seite wirklich löschen?')) return;
-    await fetch(`/api/v1/wiki/${pageId}`, { method: 'DELETE', headers: headers() });
-    setPages(pages.filter((p) => p.id !== pageId));
-    if (activePage?.id === pageId) setActivePage(null);
+    try {
+      await fetch(`/api/v1/wiki/${pageId}`, { method: 'DELETE', headers: headers() });
+      setPages(pages.filter((p) => p.id !== pageId));
+      if (activePage?.id === pageId) setActivePage(null);
+      toast.success('Seite gelöscht');
+    } catch { toast.error('Seite konnte nicht gelöscht werden'); }
   };
 
   return (

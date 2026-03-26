@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from '../../stores/toast';
 
 const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -33,7 +34,7 @@ export function PollCard({ poll: initialPoll, onUpdate }: Props) {
       const updated = await res.json();
       setPoll(updated);
       if (onUpdate) onUpdate(updated);
-    } catch { /* ignore */ }
+    } catch { toast.error('Abstimmung fehlgeschlagen'); }
     setVoting(false);
   };
 
@@ -46,7 +47,7 @@ export function PollCard({ poll: initialPoll, onUpdate }: Props) {
       const updated = await res.json();
       setPoll(updated);
       if (onUpdate) onUpdate(updated);
-    } catch { /* ignore */ }
+    } catch { toast.error('Abstimmung konnte nicht zurückgenommen werden'); }
     setVoting(false);
   };
 

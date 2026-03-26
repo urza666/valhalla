@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from '../../stores/toast';
 
 const headers = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -47,7 +48,7 @@ export function KanbanBoard({ channelId, guildId }: Props) {
       const board = await res.json();
       setBoards([...boards, board]);
       loadBoard(board.id);
-    } catch { /* toast would need import */ }
+    } catch { toast.error('Board konnte nicht erstellt werden'); }
   };
 
   const loadBoard = async (boardId: string) => {
@@ -55,7 +56,7 @@ export function KanbanBoard({ channelId, guildId }: Props) {
       const res = await fetch(`/api/v1/boards/${boardId}`, { headers: headers() });
       const board = await res.json();
       setActiveBoard(board);
-    } catch { /* silent */ }
+    } catch { toast.error('Aktion fehlgeschlagen'); }
   };
 
   const addTask = async (bucketId: string) => {
@@ -74,7 +75,7 @@ export function KanbanBoard({ channelId, guildId }: Props) {
         ),
       });
       setNewTaskTitle({ ...newTaskTitle, [bucketId]: '' });
-    } catch { /* silent */ }
+    } catch { toast.error('Aktion fehlgeschlagen'); }
   };
 
   const moveTask = async (taskId: string, toBucketId: string) => {
@@ -84,7 +85,7 @@ export function KanbanBoard({ channelId, guildId }: Props) {
         body: JSON.stringify({ bucket_id: toBucketId, position: 0 }),
       });
       if (activeBoard) loadBoard(activeBoard.id);
-    } catch { /* silent */ }
+    } catch { toast.error('Aktion fehlgeschlagen'); }
   };
 
   const toggleComplete = async (taskId: string, completed: boolean) => {
@@ -94,14 +95,14 @@ export function KanbanBoard({ channelId, guildId }: Props) {
         body: JSON.stringify({ completed }),
       });
       if (activeBoard) loadBoard(activeBoard.id);
-    } catch { /* silent */ }
+    } catch { toast.error('Aktion fehlgeschlagen'); }
   };
 
   const deleteTask = async (taskId: string) => {
     try {
       await fetch(`/api/v1/tasks/${taskId}`, { method: 'DELETE', headers: headers() });
       if (activeBoard) loadBoard(activeBoard.id);
-    } catch { /* silent */ }
+    } catch { toast.error('Aktion fehlgeschlagen'); }
   };
 
   const priorityLabels = ['', '🔵 Niedrig', '🟡 Mittel', '🟠 Hoch', '🔴 Dringend'];

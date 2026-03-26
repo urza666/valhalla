@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"os/signal"
 	"syscall"
 	"time"
@@ -142,6 +143,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.MaxBodySize(1 << 20)) // 1 MB max JSON body
+	r.Use(middleware.CSRFProtection(strings.Split(cfg.AllowedOrigins, ",")))
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:*", "https://localhost:*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -162,8 +164,8 @@ func main() {
 	// WebSocket endpoint (embedded gateway for MVP)
 	r.Get("/ws", gwServer.HandleWebSocket)
 
-	// Observability endpoints (no auth required)
-	r.Get("/metrics", metrics.Handler())
+	// Observability endpoints (no auth required, but /metrics restricted to internal)
+	r.Get("/metrics", internalOnly(metrics.Handler()))
 	r.Get("/health", metrics.HealthHandler())
 
 	// API Documentation

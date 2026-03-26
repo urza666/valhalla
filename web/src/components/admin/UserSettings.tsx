@@ -194,22 +194,23 @@ function AccountTab() {
 
 function SessionsTab() {
   const [sessions, setSessions] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [fetchTrigger, setFetchTrigger] = useState(0);
 
-  if (!loaded) {
+  useEffect(() => {
+    setLoading(true);
     fetch('/api/v1/users/@me/sessions', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
       .then((r) => r.json())
-      .then((s) => { setSessions(s || []); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }
+      .then((s) => { setSessions(s || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [fetchTrigger]);
 
   const revokeAll = async () => {
     await fetch('/api/v1/users/@me/sessions', {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
     });
-    // Reload
-    setLoaded(false);
+    setFetchTrigger((n) => n + 1);
   };
 
   return (
@@ -218,6 +219,8 @@ function SessionsTab() {
       <p style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>
         Hier siehst du alle Geräte, auf denen du eingeloggt bist.
       </p>
+
+      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 12 }}>Lade Sitzungen...</div>}
 
       <div className="settings-list">
         {sessions.map((s, i) => (

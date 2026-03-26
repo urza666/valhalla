@@ -73,7 +73,7 @@ function MemberItem({ member, guildId, status }: { member: Member; guildId: stri
 
   const getContextItems = (): MenuItem[] => {
     const items: MenuItem[] = [
-      { label: 'Profil anzeigen', icon: '👤', onClick: () => {} },
+      { label: 'Profil anzeigen', icon: '👤', onClick: (e?: React.MouseEvent) => setPopout({ x: e?.clientX ?? 300, y: e?.clientY ?? 200 }) },
       { label: 'Nachricht senden', icon: '💬', onClick: () => startDM(user.id) },
     ];
 

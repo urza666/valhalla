@@ -1924,10 +1924,25 @@ select:focus-visible {
 }
 
 /* =========================
-   Voice Button Off Line
+   Voice Button SVG Icons
    ========================= */
 .voice-btn {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.voice-btn svg {
+  flex-shrink: 0;
+}
+
+.voice-btn.muted {
+  color: var(--danger);
+}
+
+.voice-btn.streaming {
+  color: var(--status-online);
 }
 
 .voice-btn-off-line {
