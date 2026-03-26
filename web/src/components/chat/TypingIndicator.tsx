@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../../stores/auth';
-import { api } from '../../api/client';
 
 interface Props {
   channelId: string;

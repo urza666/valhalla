@@ -163,7 +163,6 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Dispatch MESSAGE_CREATE to all subscribers via WebSocket Gateway
-	guildID := h.repo.GetChannelGuildID(r.Context(), channelID)
 	if h.gwServer != nil {
 		h.gwServer.DispatchToChannel(guildID, channelID, events.EventMessageCreate, msg)
 	}
