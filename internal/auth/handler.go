@@ -3,6 +3,7 @@ package auth
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
@@ -54,11 +55,66 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if MFA is enabled
+	if resp.User.MFAEnabled {
+		// Return MFA challenge instead of full session
+		// Store a temporary MFA ticket (reuse the token as ticket)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{
+			"mfa_required": true,
+			"ticket":       resp.Token,
+			"user":         map[string]string{"id": fmt.Sprintf("%d", resp.User.ID)},
+		})
+		return
+	}
+
 	// Set HttpOnly session cookie (7 days)
 	SetSessionCookie(w, resp.Token, 7*24*60*60)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+// MFALogin handles POST /api/v1/auth/mfa/login (complete login with TOTP code)
+func (h *Handler) MFALogin(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Ticket string `json:"ticket"`
+		Code   string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.NewBadRequest("Invalid request").Write(w)
+		return
+	}
+
+	// Validate ticket (it's actually a valid session token)
+	user, err := h.service.ValidateToken(r.Context(), req.Ticket)
+	if err != nil {
+		apierror.ErrUnauthorized.Write(w)
+		return
+	}
+
+	// Get MFA secret
+	var secret *string
+	h.service.db.QueryRow(r.Context(), `SELECT mfa_secret FROM users WHERE id = $1`, user.ID).Scan(&secret)
+	if secret == nil {
+		apierror.NewBadRequest("MFA not configured").Write(w)
+		return
+	}
+
+	// Validate TOTP code
+	if !ValidateTOTP(*secret, req.Code) {
+		apierror.NewBadRequest("Ungültiger Code").Write(w)
+		return
+	}
+
+	// MFA verified — set cookie and return full response
+	SetSessionCookie(w, req.Ticket, 7*24*60*60)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"token": req.Ticket,
+		"user":  user,
+	})
 }
 
 // Logout handles POST /api/v1/auth/logout
@@ -132,6 +188,111 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Password has been reset successfully."})
+}
+
+// MFASetup handles POST /api/v1/users/@me/mfa/setup (start MFA enrollment)
+func (h *Handler) MFASetup(w http.ResponseWriter, r *http.Request) {
+	user := UserFromContext(r.Context())
+
+	// Generate TOTP secret
+	secret, err := GenerateTOTPSecret()
+	if err != nil {
+		apierror.NewInternal("Failed to generate MFA secret").Write(w)
+		return
+	}
+
+	// Store secret (not yet activated)
+	h.service.db.Exec(r.Context(), `UPDATE users SET mfa_secret = $2 WHERE id = $1`, user.ID, secret)
+
+	// Return secret + URI for QR code
+	uri := GenerateTOTPURI(secret, user.Email, "Valhalla")
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"secret": secret,
+		"uri":    uri,
+	})
+}
+
+// MFAVerify handles POST /api/v1/users/@me/mfa/verify (confirm MFA setup with first code)
+func (h *Handler) MFAVerify(w http.ResponseWriter, r *http.Request) {
+	user := UserFromContext(r.Context())
+
+	var req struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		apierror.NewBadRequest("Invalid request").Write(w)
+		return
+	}
+
+	// Get stored secret
+	var secret *string
+	h.service.db.QueryRow(r.Context(), `SELECT mfa_secret FROM users WHERE id = $1`, user.ID).Scan(&secret)
+	if secret == nil || *secret == "" {
+		apierror.NewBadRequest("MFA not set up — call /mfa/setup first").Write(w)
+		return
+	}
+
+	// Validate the code
+	if !ValidateTOTP(*secret, req.Code) {
+		apierror.NewBadRequest("Invalid code — please try again").Write(w)
+		return
+	}
+
+	// Enable MFA
+	h.service.db.Exec(r.Context(), `UPDATE users SET mfa_enabled = true WHERE id = $1`, user.ID)
+
+	// Generate backup codes
+	backupCodes, err := GenerateBackupCodes()
+	if err != nil {
+		apierror.NewInternal("Failed to generate backup codes").Write(w)
+		return
+	}
+
+	// Store hashed backup codes
+	for _, code := range backupCodes {
+		hash, _ := hashPassword(code)
+		h.service.db.Exec(r.Context(), `
+			INSERT INTO mfa_backup_codes (id, user_id, code_hash) VALUES ($1, $2, $3)
+		`, h.service.idGen.Generate().Int64(), user.ID, hash)
+	}
+
+	// Invalidate session cache
+	h.service.cache.InvalidateUser(user.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"enabled":      true,
+		"backup_codes": backupCodes,
+		"message":      "MFA enabled. Save your backup codes!",
+	})
+}
+
+// MFADisable handles POST /api/v1/users/@me/mfa/disable
+func (h *Handler) MFADisable(w http.ResponseWriter, r *http.Request) {
+	user := UserFromContext(r.Context())
+
+	var req struct {
+		Code string `json:"code"`
+	}
+	json.NewDecoder(r.Body).Decode(&req)
+
+	// Verify current TOTP code
+	var secret *string
+	h.service.db.QueryRow(r.Context(), `SELECT mfa_secret FROM users WHERE id = $1`, user.ID).Scan(&secret)
+	if secret == nil || !ValidateTOTP(*secret, req.Code) {
+		apierror.NewBadRequest("Invalid MFA code").Write(w)
+		return
+	}
+
+	// Disable MFA
+	h.service.db.Exec(r.Context(), `UPDATE users SET mfa_enabled = false, mfa_secret = NULL WHERE id = $1`, user.ID)
+	h.service.db.Exec(r.Context(), `DELETE FROM mfa_backup_codes WHERE user_id = $1`, user.ID)
+	h.service.cache.InvalidateUser(user.ID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "MFA disabled"})
 }
 
 func (h *Handler) handleAuthError(w http.ResponseWriter, err error) {

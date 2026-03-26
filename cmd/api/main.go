@@ -184,6 +184,7 @@ func main() {
 			r.With(authLimiter).Post("/login", authHandler.Login)
 			r.With(authLimiter).Post("/forgot-password", authHandler.ForgotPassword)
 			r.With(authLimiter).Post("/reset-password", authHandler.ResetPassword)
+			r.With(authLimiter).Post("/mfa/login", authHandler.MFALogin)
 		})
 
 		// Invite preview (public)
@@ -201,6 +202,9 @@ func main() {
 			r.Patch("/users/@me", userHandler.UpdateProfile)
 			r.Post("/users/@me/password", userHandler.ChangePassword)
 			r.Post("/users/@me/delete", userHandler.DeleteAccount)
+			r.Post("/users/@me/mfa/setup", authHandler.MFASetup)
+			r.Post("/users/@me/mfa/verify", authHandler.MFAVerify)
+			r.Post("/users/@me/mfa/disable", authHandler.MFADisable)
 			r.Get("/users/@me/export", userHandler.ExportData)
 			r.Get("/users/@me/sessions", userHandler.GetSessions)
 			r.Delete("/users/@me/sessions", userHandler.RevokeSession)
