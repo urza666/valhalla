@@ -31,7 +31,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   notificationSound: localStorage.getItem('notif_sound') !== 'false',
   mutedGuilds: new Set(JSON.parse(localStorage.getItem('muted_guilds') || '[]')),
   mutedChannels: new Set(JSON.parse(localStorage.getItem('muted_channels') || '[]')),
-  theme: (localStorage.getItem('theme') as 'dark' | 'light') || 'dark',
+  theme: (localStorage.getItem('theme') as 'dark' | 'light') || (window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark'),
   fontSize: Number(localStorage.getItem('font_size')) || 16,
   compactMode: localStorage.getItem('compact_mode') === 'true',
 

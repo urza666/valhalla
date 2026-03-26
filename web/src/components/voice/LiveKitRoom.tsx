@@ -13,7 +13,7 @@ import { useVoiceStore } from '../../stores/voice';
 export function LiveKitRoom() {
   const {
     connected, lkToken, lkEndpoint,
-    selfMute,
+    selfMute, outputVolume,
     audioInputDevice, videoInputDevice,
     setLkRoom,
   } = useVoiceStore();
@@ -92,6 +92,27 @@ export function LiveKitRoom() {
     if (!room?.localParticipant) return;
     room.localParticipant.setMicrophoneEnabled(!selfMute);
   }, [room, selfMute]);
+
+  // Sync output volume to all remote audio elements
+  useEffect(() => {
+    if (!room) return;
+    const vol = Math.max(0, Math.min(2, outputVolume / 100));
+    // Find all audio elements in the LiveKit room and set volume
+    room.remoteParticipants.forEach((p) => {
+      p.audioTrackPublications.forEach((pub) => {
+        if (pub.track) {
+          const elements = pub.track.attachedElements;
+          if (elements) {
+            for (const el of elements) {
+              if (el instanceof HTMLMediaElement) {
+                el.volume = vol;
+              }
+            }
+          }
+        }
+      });
+    });
+  }, [room, outputVolume, participants]);
 
   // Camera and screen share are controlled directly via voice store toggleVideo/toggleStream
   // which call room.localParticipant methods in the user-gesture context (click handler)
