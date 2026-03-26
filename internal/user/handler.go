@@ -94,6 +94,21 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// ExportData handles GET /api/v1/users/@me/export
+func (h *Handler) ExportData(w http.ResponseWriter, r *http.Request) {
+	u := auth.UserFromContext(r.Context())
+
+	data, err := h.service.ExportUserData(r.Context(), u.ID)
+	if err != nil {
+		apierror.NewInternal("Failed to export data").Write(w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"valhalla-export.json\"")
+	json.NewEncoder(w).Encode(data)
+}
+
 // DeleteAccount handles POST /api/v1/users/@me/delete
 func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 	u := auth.UserFromContext(r.Context())

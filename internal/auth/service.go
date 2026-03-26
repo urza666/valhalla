@@ -44,6 +44,7 @@ type Service struct {
 	db        *pgxpool.Pool
 	idGen     *snowflake.Generator
 	tokenTTL  time.Duration
+	cache     *SessionCache
 }
 
 // NewService creates a new auth service.
@@ -52,6 +53,7 @@ func NewService(repo Repository, idGen *snowflake.Generator, tokenTTL time.Durat
 		repo:     repo,
 		idGen:    idGen,
 		tokenTTL: tokenTTL,
+		cache:    NewSessionCache(5 * time.Minute), // Cache sessions for 5 minutes
 	}
 }
 
@@ -132,7 +134,14 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (*TokenResponse, 
 }
 
 // ValidateToken checks if a token is valid and returns the associated user.
+// Uses an in-memory cache to avoid 2 DB queries per request.
 func (s *Service) ValidateToken(ctx context.Context, token string) (*User, error) {
+	// Check cache first
+	if cached := s.cache.Get(token); cached != nil {
+		return cached, nil
+	}
+
+	// Cache miss — hit DB
 	session, err := s.repo.GetSession(ctx, token)
 	if err != nil {
 		return nil, ErrSessionExpired
@@ -143,11 +152,19 @@ func (s *Service) ValidateToken(ctx context.Context, token string) (*User, error
 		return nil, ErrSessionExpired
 	}
 
-	return s.repo.GetUserByID(ctx, session.UserID)
+	user, err := s.repo.GetUserByID(ctx, session.UserID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache
+	s.cache.Set(token, user)
+	return user, nil
 }
 
 // Logout invalidates a session token.
 func (s *Service) Logout(ctx context.Context, token string) error {
+	s.cache.Invalidate(token)
 	return s.repo.DeleteSession(ctx, token)
 }
 

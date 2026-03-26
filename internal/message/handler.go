@@ -14,7 +14,6 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/valhalla-chat/valhalla/internal/auth"
-	"github.com/valhalla-chat/valhalla/internal/gateway"
 	"github.com/valhalla-chat/valhalla/pkg/apierror"
 	"github.com/valhalla-chat/valhalla/pkg/events"
 	"github.com/valhalla-chat/valhalla/pkg/snowflake"
@@ -23,7 +22,7 @@ import (
 type Handler struct {
 	repo       *Repository
 	idGen      *snowflake.Generator
-	gwServer   *gateway.Server
+	dispatcher events.EventDispatcher
 	uploadDir  string
 }
 
@@ -40,10 +39,10 @@ var allowedExtensions = map[string]bool{
 	".json": true, ".xml": true, ".yaml": true, ".yml": true,
 }
 
-func NewHandler(repo *Repository, idGen *snowflake.Generator, gwServer *gateway.Server) *Handler {
+func NewHandler(repo *Repository, idGen *snowflake.Generator, dispatcher events.EventDispatcher) *Handler {
 	uploadDir := "uploads"
 	os.MkdirAll(uploadDir, 0o755)
-	return &Handler{repo: repo, idGen: idGen, gwServer: gwServer, uploadDir: uploadDir}
+	return &Handler{repo: repo, idGen: idGen, dispatcher: dispatcher, uploadDir: uploadDir}
 }
 
 // isGuildMember checks if a user is a member of the given guild.
@@ -89,17 +88,29 @@ func (h *Handler) GetMessages(w http.ResponseWriter, r *http.Request) {
 		messages = []Message{}
 	}
 
-	// Load attachments for all messages
+	// Batch-load attachments and reactions for all messages
 	if len(messages) > 0 {
 		msgIDs := make([]int64, len(messages))
 		for i, m := range messages {
 			msgIDs[i] = m.ID
 		}
+
+		// Attachments
 		attMap, _ := h.repo.GetAttachments(r.Context(), msgIDs)
 		if attMap != nil {
 			for i := range messages {
 				if atts, ok := attMap[messages[i].ID]; ok {
 					messages[i].Attachments = atts
+				}
+			}
+		}
+
+		// Reactions (batch instead of N+1)
+		reactMap, _ := h.repo.GetReactionsBatch(r.Context(), msgIDs, user.ID)
+		if reactMap != nil {
+			for i := range messages {
+				if reacts, ok := reactMap[messages[i].ID]; ok {
+					messages[i].Reactions = reacts
 				}
 			}
 		}
@@ -163,8 +174,8 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Dispatch MESSAGE_CREATE to all subscribers via WebSocket Gateway
-	if h.gwServer != nil {
-		h.gwServer.DispatchToChannel(guildID, channelID, events.EventMessageCreate, msg)
+	if h.dispatcher != nil {
+		h.dispatcher.DispatchToChannel(guildID, channelID, events.EventMessageCreate, msg)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -204,9 +215,9 @@ func (h *Handler) UpdateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.gwServer != nil {
+	if h.dispatcher != nil {
 		gID := h.repo.GetChannelGuildID(r.Context(), msg.ChannelID)
-		h.gwServer.DispatchToChannel(gID, msg.ChannelID, events.EventMessageUpdate, msg)
+		h.dispatcher.DispatchToChannel(gID, msg.ChannelID, events.EventMessageUpdate, msg)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -242,9 +253,9 @@ func (h *Handler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.gwServer != nil {
+	if h.dispatcher != nil {
 		delGuildID := h.repo.GetChannelGuildID(r.Context(), channelID)
-		h.gwServer.DispatchToChannel(delGuildID, channelID, events.EventMessageDelete, map[string]any{
+		h.dispatcher.DispatchToChannel(delGuildID, channelID, events.EventMessageDelete, map[string]any{
 			"id":         strconv.FormatInt(messageID, 10),
 			"channel_id": strconv.FormatInt(channelID, 10),
 		})
@@ -267,9 +278,9 @@ func (h *Handler) AddReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.gwServer != nil {
+	if h.dispatcher != nil {
 		rGuildID := h.repo.GetChannelGuildID(r.Context(), channelID)
-		h.gwServer.DispatchToChannel(rGuildID, channelID, events.EventMessageReactionAdd, map[string]any{
+		h.dispatcher.DispatchToChannel(rGuildID, channelID, events.EventMessageReactionAdd, map[string]any{
 			"user_id":    strconv.FormatInt(user.ID, 10),
 			"channel_id": strconv.FormatInt(channelID, 10),
 			"message_id": strconv.FormatInt(messageID, 10),
@@ -294,9 +305,9 @@ func (h *Handler) RemoveReaction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if h.gwServer != nil {
+	if h.dispatcher != nil {
 		rrGuildID := h.repo.GetChannelGuildID(r.Context(), channelID)
-		h.gwServer.DispatchToChannel(rrGuildID, channelID, events.EventMessageReactionRemove, map[string]any{
+		h.dispatcher.DispatchToChannel(rrGuildID, channelID, events.EventMessageReactionRemove, map[string]any{
 			"user_id":    strconv.FormatInt(user.ID, 10),
 			"channel_id": strconv.FormatInt(channelID, 10),
 			"message_id": strconv.FormatInt(messageID, 10),
@@ -390,6 +401,54 @@ func (h *Handler) AckMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReportMessage handles POST /api/v1/channels/{channelID}/messages/{messageID}/report
+func (h *Handler) ReportMessage(w http.ResponseWriter, r *http.Request) {
+	user := auth.UserFromContext(r.Context())
+	channelID, ok := apierror.RequireIDParam(w, r, "channelID")
+	if !ok {
+		return
+	}
+	messageID, ok := apierror.RequireIDParam(w, r, "messageID")
+	if !ok {
+		return
+	}
+
+	var req struct {
+		Reason string `json:"reason"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Reason == "" {
+		apierror.NewBadRequest("Reason is required").Write(w)
+		return
+	}
+	if len(req.Reason) > 1000 {
+		apierror.NewBadRequest("Reason must be at most 1000 characters").Write(w)
+		return
+	}
+
+	guildID := h.repo.GetChannelGuildID(r.Context(), channelID)
+	reportID := h.idGen.Generate().Int64()
+
+	// Get the message's author
+	var targetUserID *int64
+	authorID, err := h.repo.GetAuthorID(r.Context(), messageID)
+	if err == nil {
+		targetUserID = &authorID
+	}
+
+	_, err = h.repo.db.Exec(r.Context(), `
+		INSERT INTO reports (id, reporter_id, guild_id, channel_id, message_id, target_user_id, reason)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, reportID, user.ID, guildID, channelID, messageID, targetUserID, req.Reason)
+	if err != nil {
+		apierror.NewInternal("Failed to create report").Write(w)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Report submitted"})
 }
 
 // UploadAttachment handles POST /api/v1/channels/{channelID}/attachments

@@ -218,6 +218,37 @@ func (r *Repository) AckMessage(ctx context.Context, userID, channelID, messageI
 	return err
 }
 
+// GetReactionsBatch fetches reactions for multiple messages at once.
+func (r *Repository) GetReactionsBatch(ctx context.Context, messageIDs []int64, viewerID int64) (map[int64][]Reaction, error) {
+	if len(messageIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT message_id, emoji, COUNT(*) as count,
+		       BOOL_OR(user_id = $2) as me
+		FROM reactions
+		WHERE message_id = ANY($1)
+		GROUP BY message_id, emoji
+		ORDER BY message_id, count DESC
+	`, messageIDs, viewerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[int64][]Reaction)
+	for rows.Next() {
+		var msgID int64
+		var r Reaction
+		if err := rows.Scan(&msgID, &r.Emoji, &r.Count, &r.Me); err != nil {
+			return nil, err
+		}
+		result[msgID] = append(result[msgID], r)
+	}
+	return result, nil
+}
+
 // GetChannelGuildID resolves the guild_id for a channel.
 func (r *Repository) GetChannelGuildID(ctx context.Context, channelID int64) int64 {
 	var guildID *int64

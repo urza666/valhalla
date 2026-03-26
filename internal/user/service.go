@@ -2,14 +2,14 @@ package user
 
 import (
 	"context"
-	"errors"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-
-	"golang.org/x/crypto/argon2"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/argon2"
 )
 
 var (
@@ -188,6 +188,85 @@ func (s *Service) DeleteAccount(ctx context.Context, userID int64, password stri
 	// Messages will have author_id set to NULL (ON DELETE SET NULL)
 	_, err = s.db.Exec(ctx, `DELETE FROM users WHERE id = $1`, userID)
 	return err
+}
+
+// ExportUserData collects all personal data for GDPR Art. 20 data portability.
+func (s *Service) ExportUserData(ctx context.Context, userID int64) (map[string]any, error) {
+	export := make(map[string]any)
+
+	// User profile
+	row := s.db.QueryRow(ctx, `
+		SELECT id, username, display_name, email, bio, locale, created_at::text
+		FROM users WHERE id = $1
+	`, userID)
+	var uid int64
+	var username, email, createdAt string
+	var displayName, bio, locale *string
+	if err := row.Scan(&uid, &username, &displayName, &email, &bio, &locale, &createdAt); err != nil {
+		return nil, ErrUserNotFound
+	}
+	export["profile"] = map[string]any{
+		"id": uid, "username": username, "display_name": displayName,
+		"email": email, "bio": bio, "locale": locale, "created_at": createdAt,
+	}
+
+	// Guild memberships
+	memberRows, _ := s.db.Query(ctx, `
+		SELECT g.id, g.name, m.joined_at::text
+		FROM members m JOIN guilds g ON g.id = m.guild_id
+		WHERE m.user_id = $1
+	`, userID)
+	var guilds []map[string]any
+	if memberRows != nil {
+		defer memberRows.Close()
+		for memberRows.Next() {
+			var gid int64
+			var name, joinedAt string
+			memberRows.Scan(&gid, &name, &joinedAt)
+			guilds = append(guilds, map[string]any{"guild_id": gid, "guild_name": name, "joined_at": joinedAt})
+		}
+	}
+	export["guild_memberships"] = guilds
+
+	// Messages (last 10000)
+	msgRows, _ := s.db.Query(ctx, `
+		SELECT id, channel_id, content, created_at::text
+		FROM messages WHERE author_id = $1
+		ORDER BY id DESC LIMIT 10000
+	`, userID)
+	var messages []map[string]any
+	if msgRows != nil {
+		defer msgRows.Close()
+		for msgRows.Next() {
+			var mid, cid int64
+			var content, ts string
+			msgRows.Scan(&mid, &cid, &content, &ts)
+			messages = append(messages, map[string]any{"id": mid, "channel_id": cid, "content": content, "timestamp": ts})
+		}
+	}
+	export["messages"] = messages
+	export["message_count"] = len(messages)
+
+	// Relationships
+	relRows, _ := s.db.Query(ctx, `
+		SELECT target_id, type FROM relationships WHERE user_id = $1
+	`, userID)
+	var rels []map[string]any
+	if relRows != nil {
+		defer relRows.Close()
+		for relRows.Next() {
+			var tid int64
+			var rtype int
+			relRows.Scan(&tid, &rtype)
+			rels = append(rels, map[string]any{"target_id": tid, "type": rtype})
+		}
+	}
+	export["relationships"] = rels
+
+	export["export_date"] = time.Now().Format(time.RFC3339)
+	export["format_version"] = "1.0"
+
+	return export, nil
 }
 
 func hashPassword(password string) (string, error) {

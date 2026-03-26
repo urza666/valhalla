@@ -167,6 +167,7 @@ func main() {
 			r.Patch("/users/@me", userHandler.UpdateProfile)
 			r.Post("/users/@me/password", userHandler.ChangePassword)
 			r.Post("/users/@me/delete", userHandler.DeleteAccount)
+			r.Get("/users/@me/export", userHandler.ExportData)
 			r.Get("/users/@me/sessions", userHandler.GetSessions)
 			r.Delete("/users/@me/sessions", userHandler.RevokeSession)
 			r.Get("/users/@me/relationships", userHandler.GetRelationships)
@@ -269,6 +270,9 @@ func main() {
 
 				// Read state
 				r.Post("/messages/{messageID}/ack", messageHandler.AckMessage)
+
+				// Reports
+				r.Post("/messages/{messageID}/report", messageHandler.ReportMessage)
 
 				// Pinned messages
 				r.Get("/pins", messageHandler.GetPinnedMessages)

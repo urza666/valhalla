@@ -7,6 +7,7 @@ import { MemberList } from '../guild/MemberList';
 import { ChatView } from '../chat/ChatView';
 import { LiveKitRoom } from '../voice/LiveKitRoom';
 import { FriendsView } from '../guild/FriendsView';
+import { OnboardingWizard } from './OnboardingWizard';
 
 export function AppLayout() {
   const { user } = useAuthStore();
@@ -14,6 +15,7 @@ export function AppLayout() {
   const [showCreateGuild, setShowCreateGuild] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [showChannels, setShowChannels] = useState(false);
+  const [onboardingDismissed, setOnboardingDismissed] = useState(() => localStorage.getItem('onboarding_done') === 'true');
 
   useEffect(() => {
     loadGuilds();
@@ -71,6 +73,11 @@ export function AppLayout() {
       {/* Create guild modal */}
       {showCreateGuild && (
         <CreateGuildModal onClose={() => setShowCreateGuild(false)} />
+      )}
+
+      {/* Onboarding wizard for new users */}
+      {guilds.length === 0 && !onboardingDismissed && (
+        <OnboardingWizard onComplete={() => { setOnboardingDismissed(true); localStorage.setItem('onboarding_done', 'true'); }} />
       )}
     </div>
   );
