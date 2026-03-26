@@ -2,6 +2,7 @@
 name = "valhalla-desktop"
 version = "0.1.0"
 description = "Valhalla Desktop Client"
+authors = ["Christian Schmitt <schmiddy83@gmail.com>"]
 edition = "2021"
 
 [lib]

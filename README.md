@@ -65,7 +65,7 @@ A modern, self-hostable platform for text, voice, and video communication — bu
 # Prerequisites: Go 1.22+, Node.js 20+, Docker
 
 # 1. Clone
-git clone <repo-url>
+git clone https://dgit01p.infra.ip413.de/bot_athene/valhalla.git
 cd valhalla
 
 # 2. Start infrastructure
@@ -169,10 +169,16 @@ Comprehensive architecture documentation available in `/docs/`:
 **AGPL-3.0 with Commons Clause**
 
 - **Non-commercial use:** Free and open source (AGPL-3.0)
-- **Commercial use:** Requires a separate license — contact the author
+- **Commercial use:** Requires a separate license — contact Christian Schmitt (schmiddy83@gmail.com)
 - **Contributions:** Welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 See [LICENSE](LICENSE) for details.
+
+---
+
+## Author
+
+**Christian Schmitt** — schmiddy83@gmail.com
 
 ---
 

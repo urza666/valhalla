@@ -39,3 +39,4 @@ web/.next/
 # Temp
 tmp/
 *.tmp
+.claude/

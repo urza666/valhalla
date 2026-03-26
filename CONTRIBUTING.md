@@ -49,7 +49,7 @@ Thank you for your interest in contributing to Valhalla! This project is a love 
 
 ```bash
 # Clone
-git clone <repo-url>
+git clone https://dgit01p.infra.ip413.de/bot_athene/valhalla.git
 cd valhalla
 
 # Start infrastructure

@@ -1,6 +1,7 @@
 # Kernkonzept: Valhalla — Echtzeit-Kommunikationsplattform
 
-> **Projektname:** Valhalla (Arbeitstitel)
+> **Projektname:** Valhalla
+> **Autor:** Christian Schmitt (schmiddy83@gmail.com)
 > **Vision:** Eine moderne, skalierbare Echtzeit-Kommunikationsplattform für Communities und Business-Teams — mit dem UX-Erlebnis von Discord, der Business-Tauglichkeit von MS Teams, und einzigartigen Differenzierungsmerkmalen.
 > **Erstellt:** 2026-03-26
 
