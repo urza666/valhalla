@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/app';
+import { useAuthStore } from '../../stores/auth';
 import { api } from '../../api/client';
 import { TypingIndicator } from './TypingIndicator';
 import { Markdown } from './Markdown';
@@ -8,6 +9,7 @@ import { MessageActions } from './MessageActions';
 import { KanbanBoard } from '../kanban/KanbanBoard';
 import { WikiView } from '../wiki/WikiView';
 import { SearchPanel } from './SearchPanel';
+import { UserProfilePopout } from '../common/UserProfilePopout';
 import { toast } from '../../stores/toast';
 import type { Message } from '../../api/client';
 
@@ -23,6 +25,10 @@ export function ChatView({ channelId }: Props) {
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
   const [viewMode, setViewMode] = useState<'chat' | 'board' | 'wiki'>('chat');
   const [showSearch, setShowSearch] = useState(false);
+  const [showPins, setShowPins] = useState(false);
+  const [pins, setPins] = useState<Message[]>([]);
+  const [pinsLoading, setPinsLoading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const guildChannels = channels.get(selectedGuildId || '') || [];
   const channel = guildChannels.find((c) => c.id === channelId);
@@ -40,6 +46,7 @@ export function ChatView({ channelId }: Props) {
     setReplyTo(null);
     setEditingMsg(null);
     setShowSearch(false);
+    setShowPins(false);
   }, [channelId]);
 
   // Ctrl+K to toggle search
@@ -54,6 +61,24 @@ export function ChatView({ channelId }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  // Load pinned messages
+  const loadPins = useCallback(async () => {
+    setPinsLoading(true);
+    try {
+      const data = await api.getPins(channelId);
+      setPins(Array.isArray(data) ? data : []);
+    } catch {
+      setPins([]);
+      toast.error('Pins konnten nicht geladen werden');
+    }
+    setPinsLoading(false);
+  }, [channelId]);
+
+  const togglePins = () => {
+    if (!showPins) loadPins();
+    setShowPins(!showPins);
+  };
+
   const lastTypingSent = useRef(0);
   const sendTyping = useCallback(() => {
     const now = Date.now();
@@ -63,8 +88,57 @@ export function ChatView({ channelId }: Props) {
     }
   }, [channelId]);
 
+  // Drag & Drop file upload
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  };
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length === 0) return;
+    for (const file of files) {
+      if (file.size > 25 * 1024 * 1024) {
+        toast.error(`${file.name}: Datei zu groß (max. 25 MB)`);
+        continue;
+      }
+      try {
+        const att = await api.uploadAttachment(channelId, file);
+        await api.sendMessageWithAttachments(channelId, '', [att.id]);
+        toast.success(`${file.name} gesendet`);
+      } catch {
+        toast.error(`${file.name}: Upload fehlgeschlagen`);
+      }
+    }
+  };
+
   return (
-    <main className="chat-area" id="main-content">
+    <main
+      className="chat-area"
+      id="main-content"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {dragOver && (
+        <div className="drag-overlay">
+          <div className="drag-overlay-inner">
+            <div style={{ fontSize: 48 }}>📎</div>
+            <div style={{ fontSize: 18, fontWeight: 600 }}>Dateien hier ablegen</div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Dateien werden in #{channel?.name} gesendet</div>
+          </div>
+        </div>
+      )}
+
       <header className="chat-header">
         <button
           className="mobile-menu-btn"
@@ -76,14 +150,21 @@ export function ChatView({ channelId }: Props) {
         <span className="hash">#</span>
         {channel?.name || 'unknown'}
         {channel?.topic && (
-          <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 14, marginLeft: 8 }}>
+          <span className="chat-header-topic">
             {channel.topic}
           </span>
         )}
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
           <button className={`friends-tab ${viewMode === 'chat' ? 'active' : ''}`} onClick={() => setViewMode('chat')}>Chat</button>
-          <button className={`friends-tab ${viewMode === 'board' ? 'active' : ''}`} onClick={() => setViewMode('board')}>📋 Board</button>
-          <button className={`friends-tab ${viewMode === 'wiki' ? 'active' : ''}`} onClick={() => setViewMode('wiki')}>📖 Wiki</button>
+          <button className={`friends-tab ${viewMode === 'board' ? 'active' : ''}`} onClick={() => setViewMode('board')}>📋</button>
+          <button className={`friends-tab ${viewMode === 'wiki' ? 'active' : ''}`} onClick={() => setViewMode('wiki')}>📖</button>
+          <button
+            className={`friends-tab ${showPins ? 'active' : ''}`}
+            onClick={togglePins}
+            title="Gepinnte Nachrichten"
+          >
+            📌
+          </button>
           <button
             className={`friends-tab ${showSearch ? 'active' : ''}`}
             onClick={() => setShowSearch(!showSearch)}
@@ -127,6 +208,11 @@ export function ChatView({ channelId }: Props) {
                 showHeader={shouldShowHeader(channelMessages, i)}
                 isEditing={editingMsg?.id === msg.id}
                 onEditDone={() => setEditingMsg(null)}
+                onDoubleClickEdit={() => {
+                  if (msg.author.id === useAuthStore.getState().user?.id) {
+                    setEditingMsg(msg);
+                  }
+                }}
                 channelId={channelId}
               />
             </MessageActions>
@@ -154,6 +240,50 @@ export function ChatView({ channelId }: Props) {
       />
       </>}
 
+      {/* Pinned messages panel */}
+      {showPins && (
+        <div className="search-panel">
+          <div className="search-panel-header">
+            <span style={{ fontWeight: 600, fontSize: 14 }}>📌 Gepinnte Nachrichten</span>
+            <button className="search-close" onClick={() => setShowPins(false)}>x</button>
+          </div>
+          <div className="search-results">
+            {pinsLoading && <div className="search-status">Lade Pins...</div>}
+            {!pinsLoading && pins.length === 0 && (
+              <div className="search-status">Keine gepinnten Nachrichten</div>
+            )}
+            {!pinsLoading && pins.map((pin) => (
+              <div key={pin.id} className="search-result-item">
+                <div className="search-result-meta">
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {pin.author?.display_name || pin.author?.username}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>
+                    {new Date(pin.timestamp).toLocaleDateString('de-DE')}
+                  </span>
+                </div>
+                <div className="search-result-content">
+                  <Markdown content={pin.content} />
+                </div>
+                <button
+                  className="btn-small danger"
+                  style={{ marginTop: 4 }}
+                  onClick={async () => {
+                    try {
+                      await api.unpinMessage(channelId, pin.id);
+                      setPins(pins.filter(p => p.id !== pin.id));
+                      toast.success('Pin entfernt');
+                    } catch { toast.error('Entfernen fehlgeschlagen'); }
+                  }}
+                >
+                  Pin entfernen
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Search panel */}
       {showSearch && selectedGuildId && (
         <SearchPanel guildId={selectedGuildId} onClose={() => setShowSearch(false)} />
@@ -162,11 +292,12 @@ export function ChatView({ channelId }: Props) {
   );
 }
 
-function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: {
+function MessageItem({ message, showHeader, isEditing, onEditDone, onDoubleClickEdit, channelId }: {
   message: Message; showHeader: boolean; isEditing: boolean;
-  onEditDone: () => void; channelId: string;
+  onEditDone: () => void; onDoubleClickEdit: () => void; channelId: string;
 }) {
   const [editText, setEditText] = useState(message.content);
+  const [authorPopout, setAuthorPopout] = useState<{ x: number; y: number } | null>(null);
 
   const saveEdit = async () => {
     if (editText.trim() === message.content) {
@@ -249,6 +380,7 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
         <button
           key={r.emoji}
           className={`msg-reaction ${r.me ? 'me' : ''}`}
+          title={`${r.count} Reaktion${r.count !== 1 ? 'en' : ''}`}
           onClick={() => {
             if (r.me) {
               api.removeReaction(channelId, message.id, r.emoji).catch(() => toast.error('Reaktion konnte nicht entfernt werden'));
@@ -265,7 +397,11 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
 
   if (!showHeader) {
     return (
-      <div className={`message ${isEditing ? 'editing' : ''}`} style={{ paddingLeft: 56 }}>
+      <div
+        className={`message ${isEditing ? 'editing' : ''}`}
+        style={{ paddingLeft: 56 }}
+        onDoubleClick={onDoubleClickEdit}
+      >
         <div className="message-body">
           {content}
           {attachments}
@@ -276,7 +412,7 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
   }
 
   return (
-    <div className={`message ${isEditing ? 'editing' : ''}`}>
+    <div className={`message ${isEditing ? 'editing' : ''}`} onDoubleClick={onDoubleClickEdit}>
       <div className="message-avatar">
         {message.author.username[0].toUpperCase()}
       </div>
@@ -287,7 +423,14 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
           </div>
         )}
         <div className="message-header">
-          <span className="message-author">{message.author.display_name || message.author.username}</span>
+          <span
+            className="message-author"
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => setAuthorPopout({ x: e.clientX, y: e.clientY })}
+            title="Profil anzeigen"
+          >
+            {message.author.display_name || message.author.username}
+          </span>
           <span className="message-timestamp">{time}</span>
           {message.edited_timestamp && <span className="message-edited">(bearbeitet)</span>}
         </div>
@@ -295,6 +438,16 @@ function MessageItem({ message, showHeader, isEditing, onEditDone, channelId }: 
         {attachments}
         {reactions}
       </div>
+
+      {/* Author profile popout */}
+      {authorPopout && (
+        <UserProfilePopout
+          userId={message.author.id}
+          x={authorPopout.x}
+          y={authorPopout.y}
+          onClose={() => setAuthorPopout(null)}
+        />
+      )}
     </div>
   );
 }

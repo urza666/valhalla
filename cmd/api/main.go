@@ -144,6 +144,8 @@ func main() {
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.MaxBodySize(1 << 20)) // 1 MB max JSON body
 	r.Use(middleware.CSRFProtection(strings.Split(cfg.AllowedOrigins, ",")))
+	auditLogger := middleware.NewAuditLogger(dbPool, idGen)
+	r.Use(auditLogger.Log)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:*", "https://localhost:*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -364,15 +366,22 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Info().Msg("shutting down server...")
+	log.Info().Msg("shutting down server (10s grace period)...")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
+
+	// 1. Stop accepting new connections
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Error().Err(err).Msg("HTTP server forced to shutdown")
+	}
+
+	// 2. Cancel application context (stops background goroutines)
 	cancel()
 
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatal().Err(err).Msg("server forced to shutdown")
-	}
-	log.Info().Msg("server stopped")
+	// 3. Close NATS connection (deferred, but log explicitly)
+	log.Info().Msg("closing event bus connections...")
+
+	log.Info().Msg("server stopped gracefully")
 }
 
 // internalOnly restricts access to localhost/private IPs (for /metrics, /debug).
