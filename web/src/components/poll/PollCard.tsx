@@ -101,7 +101,7 @@ export function CreatePollDialog({ onClose, channelId }: { onClose: () => void; 
   const create = async () => {
     const validOptions = options.filter((o) => o.trim());
     if (!question.trim() || validOptions.length < 2) return;
-    if (!channelId) { setError('Kein Kanal ausgewaehlt'); return; }
+    if (!channelId) { setError('Kein Kanal ausgewählt'); return; }
 
     setCreating(true);
     setError('');
@@ -128,7 +128,7 @@ export function CreatePollDialog({ onClose, channelId }: { onClose: () => void; 
 
         <div className="form-group" style={{ marginTop: 16 }}>
           <label>Frage</label>
-          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Was moechtest du wissen?" />
+          <input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Was möchtest du wissen?" />
         </div>
 
         {options.map((opt, i) => (
@@ -143,7 +143,7 @@ export function CreatePollDialog({ onClose, channelId }: { onClose: () => void; 
         ))}
 
         {options.length < 10 && (
-          <button className="btn-small" onClick={addOption} style={{ marginBottom: 12 }}>+ Option hinzufuegen</button>
+          <button className="btn-small" onClick={addOption} style={{ marginBottom: 12 }}>+ Option hinzufügen</button>
         )}
 
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12, cursor: 'pointer' }}>

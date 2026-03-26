@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
-import { useAppStore } from '../../stores/app';
 import { toast } from '../../stores/toast';
 
 interface Props {
@@ -12,6 +11,7 @@ interface Props {
 
 export function UserProfilePopout({ userId, x, y, onClose }: Props) {
   const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     api.getUserProfile(userId).then(setProfile).catch(() => {});
@@ -37,14 +37,35 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
   const adjustedY = Math.min(y, window.innerHeight - 350);
 
   const openDM = async () => {
+    if (loading) return;
+    setLoading(true);
     try {
       const channel = await api.createDM(userId);
-      const { selectChannel } = useAppStore.getState();
-      selectChannel(channel.id);
-      toast.success('DM-Kanal geöffnet');
+      // Store DM channel info and navigate — dispatch custom event for AppLayout
+      window.dispatchEvent(new CustomEvent('valhalla:open-dm', {
+        detail: { channelId: channel.id, recipientName: profile.display_name || profile.username },
+      }));
+      toast.success(`DM mit ${profile.display_name || profile.username} geöffnet`);
       onClose();
-    } catch {
+    } catch (err: any) {
+      if (err?.status === 409 || err?.message?.includes('already')) {
+        // DM already exists — try to navigate anyway
+        try {
+          const dms = await api.getMyDMs();
+          const existingDm = dms.find((dm) => dm.recipient?.id === userId);
+          if (existingDm) {
+            window.dispatchEvent(new CustomEvent('valhalla:open-dm', {
+              detail: { channelId: existingDm.id, recipientName: profile.display_name || profile.username },
+            }));
+            toast.success(`DM mit ${profile.display_name || profile.username} geöffnet`);
+            onClose();
+            return;
+          }
+        } catch { /* ignore */ }
+      }
       toast.error('DM konnte nicht erstellt werden');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -88,8 +109,9 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
             className="btn"
             style={{ flex: 1, fontSize: 14, padding: '8px 12px' }}
             onClick={openDM}
+            disabled={loading}
           >
-            Nachricht senden
+            {loading ? 'Wird geöffnet...' : 'Nachricht senden'}
           </button>
           <button
             className="btn"

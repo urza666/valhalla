@@ -277,14 +277,14 @@ function AppearanceTab() {
             onClick={() => applyTheme('dark')}
             style={{ background: '#313338', color: '#f2f3f5', border: theme === 'dark' ? '2px solid var(--brand-primary)' : '2px solid var(--border-subtle)', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
           >
-            Dark
+            🌙 Dunkel
           </button>
           <button
             className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
             onClick={() => applyTheme('light')}
             style={{ background: '#ffffff', color: '#060607', border: theme === 'light' ? '2px solid var(--brand-primary)' : '2px solid #e1e1e4', borderRadius: 8, padding: '12px 24px', cursor: 'pointer', fontWeight: 600 }}
           >
-            Light
+            ☀️ Hell
           </button>
         </div>
       </div>
@@ -352,21 +352,34 @@ function VoiceVideoTab() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
 
-  // Load available devices
+  const [devicesError, setDevicesError] = useState('');
+
+  // Load available devices — request audio and video permissions separately
   useEffect(() => {
     const loadDevices = async () => {
       try {
-        // Request permission first so labels are populated
-        await navigator.mediaDevices.getUserMedia({ audio: true, video: true }).then(s => {
-          s.getTracks().forEach(t => t.stop());
-        }).catch(() => {});
+        // Try audio first (most likely to succeed)
+        try {
+          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioStream.getTracks().forEach(t => t.stop());
+        } catch {
+          setDevicesError('Mikrofon-Zugriff verweigert. Bitte Berechtigungen in den Browser-Einstellungen prüfen.');
+        }
+
+        // Try video separately (may fail without camera)
+        try {
+          const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
+          videoStream.getTracks().forEach(t => t.stop());
+        } catch {
+          // No camera is fine — just won't show video devices
+        }
 
         const devices = await navigator.mediaDevices.enumerateDevices();
         setAudioInputs(devices.filter(d => d.kind === 'audioinput'));
         setAudioOutputs(devices.filter(d => d.kind === 'audiooutput'));
         setVideoInputs(devices.filter(d => d.kind === 'videoinput'));
       } catch {
-        // Permission denied or no devices
+        setDevicesError('Geräte konnten nicht geladen werden');
       }
     };
     loadDevices();
@@ -379,9 +392,12 @@ function VoiceVideoTab() {
 
   const startMicTest = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: audioInputDevice !== 'default' ? { exact: audioInputDevice } : undefined },
-      });
+      const constraints: MediaStreamConstraints = {
+        audio: audioInputDevice && audioInputDevice !== 'default'
+          ? { deviceId: { ideal: audioInputDevice } }
+          : true,
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       micStreamRef.current = stream;
 
       const audioCtx = new AudioContext();
@@ -465,6 +481,12 @@ function VoiceVideoTab() {
   return (
     <div>
       <h2>Sprache & Video</h2>
+
+      {devicesError && (
+        <div style={{ background: 'rgba(242,63,67,0.1)', border: '1px solid var(--danger)', borderRadius: 4, padding: '8px 12px', marginTop: 12, marginBottom: 12, fontSize: 13, color: 'var(--danger)' }}>
+          {devicesError}
+        </div>
+      )}
 
       {/* Input device */}
       <div className="form-group" style={{ marginTop: 20 }}>

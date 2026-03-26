@@ -111,7 +111,12 @@ export function FriendsView() {
                     <div className="friend-status">Online</div>
                   </div>
                   <div className="friend-actions">
-                    <button className="btn-small" title="Nachricht" aria-label="Nachricht senden">💬</button>
+                    <button className="btn-small" title="Nachricht" aria-label="Nachricht senden" onClick={async () => {
+                      try {
+                        const ch = await api.createDM(f.user_id);
+                        window.dispatchEvent(new CustomEvent('valhalla:open-dm', { detail: { channelId: ch.id, recipientName: f.display_name || f.username } }));
+                      } catch { toast.error('DM konnte nicht erstellt werden'); }
+                    }}>💬</button>
                     <button className="btn-small danger" onClick={() => remove(f.id)} title="Entfernen" aria-label="Freund entfernen">✕</button>
                   </div>
                 </div>

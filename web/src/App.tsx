@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './stores/auth';
 import { useAppStore } from './stores/app';
 import { useSettingsStore } from './stores/settings';
@@ -7,18 +7,49 @@ import { AppLayout } from './components/layout/AppLayout';
 import { ToastContainer } from './components/common/ToastContainer';
 import { KeyboardShortcuts } from './components/common/KeyboardShortcuts';
 import { useUnreadStore } from './stores/unread';
+import { api } from './api/client';
+import { toast } from './stores/toast';
 import type { Message } from './api/client';
 
 export function App() {
   const { user, gateway, isLoading, restore } = useAuthStore();
-  const { addMessage, updateMessage, removeMessage, selectedChannelId } = useAppStore();
+  const { addMessage, updateMessage, removeMessage, selectedChannelId, loadGuilds } = useAppStore();
   const { sendNotification } = useSettingsStore();
   const { incrementUnread } = useUnreadStore();
+  const [inviteHandled, setInviteHandled] = useState(false);
 
   // Restore session on mount
   useEffect(() => {
     restore();
   }, [restore]);
+
+  // Handle invite links: /invite/CODE or /join/CODE
+  useEffect(() => {
+    if (!user || inviteHandled) return;
+
+    const path = window.location.pathname;
+    const inviteMatch = path.match(/^\/(invite|join)\/([A-Za-z0-9_-]+)/);
+    if (inviteMatch) {
+      const code = inviteMatch[2];
+      setInviteHandled(true);
+
+      api.joinGuild(code)
+        .then((data) => {
+          toast.success(`Server "${data.guild.name}" beigetreten!`);
+          loadGuilds();
+          // Clean URL
+          window.history.replaceState({}, '', '/');
+        })
+        .catch((err) => {
+          if (err?.status === 409) {
+            toast.info('Du bist bereits Mitglied dieses Servers');
+          } else {
+            toast.error('Einladung ungültig oder abgelaufen');
+          }
+          window.history.replaceState({}, '', '/');
+        });
+    }
+  }, [user, inviteHandled, loadGuilds]);
 
   // Subscribe to gateway events
   useEffect(() => {
@@ -50,7 +81,7 @@ export function App() {
     ];
 
     return () => unsubs.forEach((unsub) => unsub());
-  }, [gateway, addMessage, updateMessage, removeMessage]);
+  }, [gateway, addMessage, updateMessage, removeMessage, selectedChannelId, user?.id, incrementUnread, sendNotification]);
 
   if (isLoading) {
     return (

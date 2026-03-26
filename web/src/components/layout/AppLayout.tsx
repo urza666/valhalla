@@ -11,17 +11,43 @@ import { OnboardingWizard } from './OnboardingWizard';
 
 export function AppLayout() {
   const { user } = useAuthStore();
-  const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild } = useAppStore();
+  const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild, selectChannel } = useAppStore();
   const [showCreateGuild, setShowCreateGuild] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
   const [showChannels, setShowChannels] = useState(false);
+  const [dmChannelId, setDmChannelId] = useState<string | null>(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(() => localStorage.getItem('onboarding_done') === 'true');
 
   useEffect(() => {
     loadGuilds();
   }, [loadGuilds]);
 
+  // Listen for DM open events from UserProfilePopout / MemberList
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.channelId) {
+        setDmChannelId(detail.channelId);
+        setShowFriends(false);
+        // Load messages for this DM channel
+        selectChannel(detail.channelId);
+      }
+    };
+    window.addEventListener('valhalla:open-dm', handler);
+    return () => window.removeEventListener('valhalla:open-dm', handler);
+  }, [selectChannel]);
+
   const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
+
+  // When selecting a guild, clear DM state
+  const handleSelectGuild = (id: string) => {
+    setShowFriends(false);
+    setShowChannels(true);
+    setDmChannelId(null);
+    selectGuild(id);
+  };
+
+  const showDm = dmChannelId && selectedChannelId === dmChannelId;
 
   return (
     <div className={`app-layout ${showChannels ? 'show-channels' : ''}`} role="application">
@@ -29,14 +55,18 @@ export function AppLayout() {
       <GuildSidebar
         guilds={guilds}
         selectedGuildId={selectedGuildId}
-        onSelectGuild={(id) => { setShowFriends(false); setShowChannels(true); selectGuild(id); }}
+        onSelectGuild={handleSelectGuild}
         onCreateGuild={() => setShowCreateGuild(true)}
-        onShowFriends={() => { setShowFriends(true); setShowChannels(false); }}
+        onShowFriends={() => { setShowFriends(true); setShowChannels(false); setDmChannelId(null); }}
         showFriends={showFriends}
       />
 
-      {/* Friends view OR normal server view */}
-      {showFriends ? (
+      {/* DM direct view */}
+      {showDm ? (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <ChatView channelId={dmChannelId!} />
+        </div>
+      ) : showFriends ? (
         <FriendsView />
       ) : (
         <>

@@ -15,7 +15,6 @@ export function VoiceChannel({ channelId, guildId }: Props) {
   const isThisChannel = connected && currentChannelId === channelId;
   const usersInChannel = channelVoiceStates.filter((s) => s.channel_id === channelId);
 
-  // Listen for voice state updates
   useEffect(() => {
     if (!gateway) return;
     const unsub = gateway.on('VOICE_STATE_UPDATE', (data) => {
@@ -31,8 +30,9 @@ export function VoiceChannel({ channelId, guildId }: Props) {
           <button
             className="voice-join-btn"
             onClick={() => joinChannel(guildId, channelId)}
+            aria-label="Sprachkanal beitreten"
           >
-            Join Voice
+            Beitreten
           </button>
         </div>
       )}
@@ -40,12 +40,12 @@ export function VoiceChannel({ channelId, guildId }: Props) {
       {usersInChannel.map((state) => (
         <div key={state.user_id} className="voice-user">
           <div className="voice-user-avatar">
-            <div className={`voice-user-ring ${false ? 'speaking' : ''}`}>
-              U
+            <div className="voice-user-ring">
+              {state.user_id.slice(-2).toUpperCase()}
             </div>
           </div>
           <span className="voice-user-name">
-            User {state.user_id.slice(-4)}
+            Nutzer {state.user_id.slice(-4)}
             {state.self_mute && ' 🔇'}
             {state.self_deaf && ' 🔕'}
           </span>
@@ -56,8 +56,9 @@ export function VoiceChannel({ channelId, guildId }: Props) {
         <button
           className="voice-join-btn small"
           onClick={() => joinChannel(guildId, channelId)}
+          aria-label="Sprachkanal beitreten"
         >
-          Join
+          Beitreten
         </button>
       )}
     </div>

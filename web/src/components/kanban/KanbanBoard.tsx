@@ -120,7 +120,7 @@ export function KanbanBoard({ channelId, guildId }: Props) {
   return (
     <div className="kanban-container">
       <div className="kanban-header">
-        <button className="btn-small" onClick={() => setActiveBoard(null)}>← Zurueck</button>
+        <button className="btn-small" onClick={() => setActiveBoard(null)}>← Zurück</button>
         <h3>{activeBoard.name}</h3>
       </div>
 

@@ -22,6 +22,7 @@ interface VoiceStore {
   selfStream: boolean;
   lkToken: string | null;
   lkEndpoint: string | null;
+  lkRoom: any | null; // LiveKit Room instance
   channelVoiceStates: VoiceState[];
 
   // Audio/Video device settings
@@ -34,6 +35,7 @@ interface VoiceStore {
   // Actions
   joinChannel: (guildId: string, channelId: string) => Promise<void>;
   leaveChannel: () => Promise<void>;
+  setLkRoom: (room: any | null) => void;
   toggleMute: () => Promise<void>;
   toggleDeaf: () => Promise<void>;
   toggleVideo: () => Promise<void>;
@@ -57,6 +59,7 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
   selfStream: false,
   lkToken: null,
   lkEndpoint: null,
+  lkRoom: null,
   channelVoiceStates: [],
 
   // Load saved device preferences
@@ -106,8 +109,13 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
       selfStream: false,
       lkToken: null,
       lkEndpoint: null,
+      lkRoom: null,
       channelVoiceStates: [],
     });
+  },
+
+  setLkRoom: (room) => {
+    set({ lkRoom: room });
   },
 
   toggleMute: async () => {
@@ -127,14 +135,33 @@ export const useVoiceStore = create<VoiceStore>((set, get) => ({
 
   toggleVideo: async () => {
     const newVideo = !get().selfVideo;
-    set({ selfVideo: newVideo });
-    api.updateVoiceStateFull({ self_video: newVideo }).catch(() => {});
+    const room = get().lkRoom;
+    // Must call LiveKit directly from user gesture context (click handler)
+    if (room?.localParticipant) {
+      try {
+        await room.localParticipant.setCameraEnabled(newVideo);
+        set({ selfVideo: newVideo });
+        api.updateVoiceStateFull({ self_video: newVideo }).catch(() => {});
+      } catch (err) {
+        console.error('Camera toggle failed:', err);
+      }
+    }
   },
 
   toggleStream: async () => {
     const newStream = !get().selfStream;
-    set({ selfStream: newStream });
-    api.updateVoiceStateFull({ self_stream: newStream }).catch(() => {});
+    const room = get().lkRoom;
+    // Must call LiveKit directly from user gesture context (click handler)
+    if (room?.localParticipant) {
+      try {
+        await room.localParticipant.setScreenShareEnabled(newStream);
+        set({ selfStream: newStream });
+        api.updateVoiceStateFull({ self_stream: newStream }).catch(() => {});
+      } catch (err) {
+        console.error('Screen share toggle failed:', err);
+        // User cancelled the screen share picker
+      }
+    }
   },
 
   setAudioInputDevice: (deviceId) => {

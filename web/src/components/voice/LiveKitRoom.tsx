@@ -13,8 +13,9 @@ import { useVoiceStore } from '../../stores/voice';
 export function LiveKitRoom() {
   const {
     connected, lkToken, lkEndpoint,
-    selfMute, selfVideo, selfStream,
+    selfMute,
     audioInputDevice, videoInputDevice,
+    setLkRoom,
   } = useVoiceStore();
   const [room, setRoom] = useState<Room | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -40,6 +41,7 @@ export function LiveKitRoom() {
       try {
         await newRoom.connect(lkEndpoint, lkToken);
         setRoom(newRoom);
+        setLkRoom(newRoom); // Store room in voice store for direct access
         updateParticipants(newRoom);
       } catch (err) {
         console.error('[LiveKit] Connection failed:', err);
@@ -51,6 +53,7 @@ export function LiveKitRoom() {
     return () => {
       newRoom.disconnect();
       setRoom(null);
+      setLkRoom(null);
       setParticipants([]);
     };
   }, [connected, lkToken, lkEndpoint]);
@@ -90,17 +93,8 @@ export function LiveKitRoom() {
     room.localParticipant.setMicrophoneEnabled(!selfMute);
   }, [room, selfMute]);
 
-  // Sync camera state to LiveKit
-  useEffect(() => {
-    if (!room?.localParticipant) return;
-    room.localParticipant.setCameraEnabled(selfVideo);
-  }, [room, selfVideo]);
-
-  // Sync screen share state to LiveKit
-  useEffect(() => {
-    if (!room?.localParticipant) return;
-    room.localParticipant.setScreenShareEnabled(selfStream);
-  }, [room, selfStream]);
+  // Camera and screen share are controlled directly via voice store toggleVideo/toggleStream
+  // which call room.localParticipant methods in the user-gesture context (click handler)
 
   // Update participants list
   const updateParticipants = (r: Room) => {

@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { api, Guild } from '../../api/client';
+import { useEffect, useState } from 'react';
+import { api, Guild, Channel, Member, Role } from '../../api/client';
+import { toast } from '../../stores/toast';
 
 interface Props {
   guild: Guild;
@@ -20,8 +21,8 @@ export function ServerSettings({ guild, onClose, onUpdate, onDelete }: Props) {
           <button className={`settings-tab ${tab === 'channels' ? 'active' : ''}`} onClick={() => setTab('channels')}>Kanäle</button>
           <button className={`settings-tab ${tab === 'members' ? 'active' : ''}`} onClick={() => setTab('members')}>Mitglieder</button>
           <button className={`settings-tab ${tab === 'roles' ? 'active' : ''}`} onClick={() => setTab('roles')}>Rollen</button>
-          <button className={`settings-tab ${tab === 'bans' ? 'active' : ''}`} onClick={() => setTab('bans')}>Bans</button>
-          <button className={`settings-tab ${tab === 'audit' ? 'active' : ''}`} onClick={() => setTab('audit')}>Audit Log</button>
+          <button className={`settings-tab ${tab === 'bans' ? 'active' : ''}`} onClick={() => setTab('bans')}>Sperren</button>
+          <button className={`settings-tab ${tab === 'audit' ? 'active' : ''}`} onClick={() => setTab('audit')}>Protokoll</button>
           <div className="settings-tab-sep" />
           <button className="settings-tab danger" onClick={onDelete}>Server löschen</button>
         </div>
@@ -46,16 +47,11 @@ function OverviewTab({ guild, onUpdate }: { guild: Guild; onUpdate: (g: Guild) =
   const save = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/v1/guilds/${guild.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-        body: JSON.stringify({ name }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        onUpdate(updated);
-      }
-    } catch { /* ignore */ }
+      const updated = await api.updateGuild(guild.id, { name });
+      onUpdate(updated);
+    } catch {
+      toast.error('Servername konnte nicht gespeichert werden');
+    }
     setSaving(false);
   };
 
@@ -74,14 +70,13 @@ function OverviewTab({ guild, onUpdate }: { guild: Guild; onUpdate: (g: Guild) =
 }
 
 function ChannelsTab({ guildId }: { guildId: string }) {
-  const [channels, setChannels] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState(0);
 
-  if (!loaded) {
-    api.getGuildChannels(guildId).then((c) => { setChannels(c || []); setLoaded(true); });
-  }
+  useEffect(() => {
+    api.getGuildChannels(guildId).then((c) => setChannels(c || [])).catch(() => {});
+  }, [guildId]);
 
   const createChannel = async () => {
     if (!newName.trim()) return;
@@ -89,7 +84,18 @@ function ChannelsTab({ guildId }: { guildId: string }) {
       const ch = await api.createChannel(guildId, newName.trim(), newType);
       setChannels([...channels, ch]);
       setNewName('');
-    } catch { /* ignore */ }
+    } catch {
+      toast.error('Kanal konnte nicht erstellt werden');
+    }
+  };
+
+  const deleteChannel = async (channelId: string) => {
+    try {
+      await api.deleteChannel(channelId);
+      setChannels(channels.filter((c) => c.id !== channelId));
+    } catch {
+      toast.error('Kanal konnte nicht gelöscht werden');
+    }
   };
 
   return (
@@ -108,10 +114,7 @@ function ChannelsTab({ guildId }: { guildId: string }) {
         {channels.map((ch) => (
           <div key={ch.id} className="settings-list-item">
             <span>{ch.type === 2 ? '🔊' : ch.type === 4 ? '📁' : '#'} {ch.name}</span>
-            <button className="btn-small danger" onClick={() => {
-              fetch(`/api/v1/channels/${ch.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
-              setChannels(channels.filter((c) => c.id !== ch.id));
-            }}>Löschen</button>
+            <button className="btn-small danger" onClick={() => deleteChannel(ch.id)}>Löschen</button>
           </div>
         ))}
       </div>
@@ -120,19 +123,20 @@ function ChannelsTab({ guildId }: { guildId: string }) {
 }
 
 function MembersTab({ guildId }: { guildId: string }) {
-  const [members, setMembers] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [members, setMembers] = useState<Member[]>([]);
 
-  if (!loaded) {
-    api.getGuildMembers(guildId).then((m) => { setMembers(m || []); setLoaded(true); });
-  }
+  useEffect(() => {
+    api.getGuildMembers(guildId).then((m) => setMembers(m || [])).catch(() => {});
+  }, [guildId]);
 
   const kick = async (userId: string) => {
-    await fetch(`/api/v1/guilds/${guildId}/members/${userId}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-    });
-    setMembers(members.filter((m) => m.user_id !== userId));
+    try {
+      await api.kickMember(guildId, userId);
+      setMembers(members.filter((m) => m.user_id !== userId));
+      toast.success('Mitglied gekickt');
+    } catch {
+      toast.error('Kicken fehlgeschlagen');
+    }
   };
 
   return (
@@ -151,44 +155,48 @@ function MembersTab({ guildId }: { guildId: string }) {
 }
 
 function RolesTab({ guildId }: { guildId: string }) {
-  const [roles, setRoles] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [newRoleName, setNewRoleName] = useState('');
-  const [editingRole, setEditingRole] = useState<any>(null);
+  const [editingRole, setEditingRole] = useState<{ id: string; name: string; color: number; permissions: string } | null>(null);
 
-  const headers = { Authorization: `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' };
-
-  if (!loaded) {
-    fetch(`/api/v1/guilds/${guildId}/roles`, { headers })
-      .then((r) => r.json())
-      .then((r) => { setRoles(r || []); setLoaded(true); });
-  }
+  useEffect(() => {
+    api.getGuildRoles(guildId).then((r) => setRoles(r || [])).catch(() => {});
+  }, [guildId]);
 
   const createRole = async () => {
     if (!newRoleName.trim()) return;
-    const res = await fetch(`/api/v1/guilds/${guildId}/roles`, {
-      method: 'POST', headers, body: JSON.stringify({ name: newRoleName.trim() }),
-    });
-    const role = await res.json();
-    setRoles([...roles, role]);
-    setNewRoleName('');
+    try {
+      const role = await api.createRole(guildId, newRoleName.trim());
+      setRoles([...roles, role]);
+      setNewRoleName('');
+    } catch {
+      toast.error('Rolle konnte nicht erstellt werden');
+    }
   };
 
   const deleteRole = async (roleId: string) => {
     if (!confirm('Rolle wirklich löschen?')) return;
-    await fetch(`/api/v1/guilds/${guildId}/roles/${roleId}`, { method: 'DELETE', headers });
-    setRoles(roles.filter((r) => r.id !== roleId));
+    try {
+      await api.deleteRole(guildId, roleId);
+      setRoles(roles.filter((r) => r.id !== roleId));
+    } catch {
+      toast.error('Rolle konnte nicht gelöscht werden');
+    }
   };
 
-  const saveRole = async (role: any) => {
-    await fetch(`/api/v1/guilds/${guildId}/roles/${role.id}`, {
-      method: 'PATCH', headers, body: JSON.stringify(role),
-    });
-    setEditingRole(null);
-    setLoaded(false);
+  const saveRole = async () => {
+    if (!editingRole) return;
+    try {
+      await api.updateRole(guildId, editingRole.id, editingRole);
+      setEditingRole(null);
+      // Reload roles
+      const updated = await api.getGuildRoles(guildId);
+      setRoles(updated || []);
+    } catch {
+      toast.error('Rolle konnte nicht gespeichert werden');
+    }
   };
 
-  // Permission names for the matrix
   const PERMS = [
     { name: 'Administrator', bit: 3 },
     { name: 'Server verwalten', bit: 5 },
@@ -211,14 +219,11 @@ function RolesTab({ guildId }: { guildId: string }) {
   return (
     <div>
       <h2>Rollen</h2>
-
-      {/* Create role */}
       <div style={{ display: 'flex', gap: 8, marginTop: 16, marginBottom: 16 }}>
         <input placeholder="Neuer Rollenname" value={newRoleName} onChange={(e) => setNewRoleName(e.target.value)} style={{ flex: 1 }} />
         <button className="btn" style={{ width: 'auto' }} onClick={createRole}>Erstellen</button>
       </div>
 
-      {/* Editing a role - permission matrix */}
       {editingRole && (
         <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 16, marginBottom: 16 }}>
           <h3 style={{ fontSize: 16, marginBottom: 12 }}>Rolle bearbeiten: {editingRole.name}</h3>
@@ -248,15 +253,14 @@ function RolesTab({ guildId }: { guildId: string }) {
             })}
           </div>
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button className="btn" style={{ width: 'auto' }} onClick={() => saveRole(editingRole)}>Speichern</button>
+            <button className="btn" style={{ width: 'auto' }} onClick={saveRole}>Speichern</button>
             <button className="btn-small" onClick={() => setEditingRole(null)}>Abbrechen</button>
           </div>
         </div>
       )}
 
-      {/* Role list */}
       <div className="settings-list">
-        {roles.map((r: any) => (
+        {roles.map((r) => (
           <div key={r.id} className="settings-list-item">
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: r.color ? `#${r.color.toString(16).padStart(6, '0')}` : 'var(--text-muted)' }} />
@@ -264,7 +268,7 @@ function RolesTab({ guildId }: { guildId: string }) {
               <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Pos. {r.position}</span>
             </div>
             <div style={{ display: 'flex', gap: 4 }}>
-              <button className="btn-small" onClick={() => setEditingRole({ ...r, permissions: r.permissions?.toString() || '0' })}>Bearbeiten</button>
+              <button className="btn-small" onClick={() => setEditingRole({ id: r.id, name: r.name, color: r.color, permissions: r.permissions?.toString() || '0' })}>Bearbeiten</button>
               {r.position > 0 && <button className="btn-small danger" onClick={() => deleteRole(r.id)}>Löschen</button>}
             </div>
           </div>
@@ -275,37 +279,36 @@ function RolesTab({ guildId }: { guildId: string }) {
 }
 
 function BansTab({ guildId }: { guildId: string }) {
-  const [bans, setBans] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [bans, setBans] = useState<{ user_id: string; user?: { username: string }; reason?: string }[]>([]);
 
-  const headers = { Authorization: `Bearer ${localStorage.getItem('token')}` };
-
-  if (!loaded) {
-    fetch(`/api/v1/guilds/${guildId}/bans`, { headers })
-      .then((r) => r.json())
-      .then((b) => { setBans(b || []); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }
+  useEffect(() => {
+    api.getGuildBans(guildId).then((b) => setBans(b || [])).catch(() => {});
+  }, [guildId]);
 
   const unban = async (userId: string) => {
-    await fetch(`/api/v1/guilds/${guildId}/bans/${userId}`, { method: 'DELETE', headers });
-    setBans(bans.filter((b) => b.user_id !== userId));
+    try {
+      await api.unbanUser(guildId, userId);
+      setBans(bans.filter((b) => b.user_id !== userId));
+      toast.success('Nutzer entbannt');
+    } catch {
+      toast.error('Entbannen fehlgeschlagen');
+    }
   };
 
   return (
     <div>
-      <h2>Bans ({bans.length})</h2>
+      <h2>Sperren ({bans.length})</h2>
       {bans.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', marginTop: 16 }}>Keine gebannten Nutzer.</p>
+        <p style={{ color: 'var(--text-muted)', marginTop: 16 }}>Keine gesperrten Nutzer.</p>
       ) : (
         <div className="settings-list" style={{ marginTop: 16 }}>
-          {bans.map((b: any) => (
+          {bans.map((b) => (
             <div key={b.user_id} className="settings-list-item">
               <div>
                 <span>{b.user?.username || b.user_id}</span>
                 {b.reason && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Grund: {b.reason}</div>}
               </div>
-              <button className="btn-small" onClick={() => unban(b.user_id)}>Entbannen</button>
+              <button className="btn-small" onClick={() => unban(b.user_id)}>Entsperren</button>
             </div>
           ))}
         </div>
@@ -315,35 +318,31 @@ function BansTab({ guildId }: { guildId: string }) {
 }
 
 function AuditLogTab({ guildId }: { guildId: string }) {
-  const [entries, setEntries] = useState<any[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [entries, setEntries] = useState<{ id: string; action_type: number; reason?: string; created_at: string }[]>([]);
 
-  if (!loaded) {
-    fetch(`/api/v1/guilds/${guildId}/audit-logs`, { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-      .then((r) => r.json())
-      .then((e) => { setEntries(e || []); setLoaded(true); })
-      .catch(() => setLoaded(true));
-  }
+  useEffect(() => {
+    api.getAuditLog(guildId).then((e) => setEntries(e || [])).catch(() => {});
+  }, [guildId]);
 
   const actionNames: Record<number, string> = {
-    1: 'Guild Update', 10: 'Channel Create', 11: 'Channel Update', 12: 'Channel Delete',
-    20: 'Member Kick', 22: 'Member Ban Add', 23: 'Member Ban Remove',
-    24: 'Member Update', 25: 'Member Role Update',
-    30: 'Role Create', 31: 'Role Update', 32: 'Role Delete',
-    72: 'Message Delete',
+    1: 'Server aktualisiert', 10: 'Kanal erstellt', 11: 'Kanal aktualisiert', 12: 'Kanal gelöscht',
+    20: 'Mitglied gekickt', 22: 'Mitglied gesperrt', 23: 'Sperre aufgehoben',
+    24: 'Mitglied aktualisiert', 25: 'Mitglied-Rolle geändert',
+    30: 'Rolle erstellt', 31: 'Rolle aktualisiert', 32: 'Rolle gelöscht',
+    72: 'Nachricht gelöscht',
   };
 
   return (
     <div>
-      <h2>Audit Log</h2>
+      <h2>Protokoll</h2>
       {entries.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', marginTop: 16 }}>Keine Einträge vorhanden.</p>
       ) : (
         <div className="settings-list" style={{ marginTop: 16 }}>
-          {entries.map((e: any) => (
+          {entries.map((e) => (
             <div key={e.id} className="settings-list-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontWeight: 600 }}>{actionNames[e.action_type] || `Action ${e.action_type}`}</span>
+                <span style={{ fontWeight: 600 }}>{actionNames[e.action_type] || `Aktion ${e.action_type}`}</span>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{e.created_at?.split('T')[0]}</span>
               </div>
               {e.reason && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Grund: {e.reason}</div>}

@@ -68,7 +68,7 @@ export function WikiView({ guildId }: Props) {
   };
 
   const deletePage = async (pageId: string) => {
-    if (!confirm('Seite wirklich loschen?')) return;
+    if (!confirm('Seite wirklich löschen?')) return;
     await fetch(`/api/v1/wiki/${pageId}`, { method: 'DELETE', headers: headers() });
     setPages(pages.filter((p) => p.id !== pageId));
     if (activePage?.id === pageId) setActivePage(null);
@@ -104,7 +104,7 @@ export function WikiView({ guildId }: Props) {
         {!activePage ? (
           <div className="empty-state">
             <h2>Wiki</h2>
-            <p>Waehle eine Seite oder erstelle eine neue.</p>
+            <p>Wähle eine Seite oder erstelle eine neue.</p>
           </div>
         ) : editing ? (
           <div className="wiki-editor">
@@ -131,7 +131,7 @@ export function WikiView({ guildId }: Props) {
               <h1>{activePage.title}</h1>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="btn-small" onClick={() => startEdit(activePage)}>Bearbeiten</button>
-                <button className="btn-small danger" onClick={() => deletePage(activePage.id)}>Loschen</button>
+                <button className="btn-small danger" onClick={() => deletePage(activePage.id)}>Löschen</button>
               </div>
             </div>
             <div className="wiki-reader-meta">

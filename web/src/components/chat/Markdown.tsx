@@ -31,12 +31,12 @@ function parseMarkdown(text: string): string {
   // Bold (**text**)
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
+  // Underline (__text__) — must be before single-underscore italic
+  html = html.replace(/__(.+?)__/g, '<u>$1</u>');
+
   // Italic (*text* or _text_)
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
   html = html.replace(/(?<!\w)_(.+?)_(?!\w)/g, '<em>$1</em>');
-
-  // Underline (__text__)
-  html = html.replace(/__(.+?)__/g, '<u>$1</u>');
 
   // Strikethrough (~~text~~)
   html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');

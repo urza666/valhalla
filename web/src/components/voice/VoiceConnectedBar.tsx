@@ -20,10 +20,10 @@ export function VoiceConnectedBar() {
       <div className="voice-bar-info">
         <div className="voice-bar-status">
           <span className="voice-bar-dot" />
-          Voice Connected
+          Sprache verbunden
         </div>
         <div className="voice-bar-channel">
-          {channel?.name || 'Unknown Channel'}
+          {channel?.name || 'Unbekannter Kanal'}
         </div>
       </div>
 
