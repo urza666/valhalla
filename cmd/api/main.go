@@ -166,6 +166,10 @@ func main() {
 	r.Get("/metrics", metrics.Handler())
 	r.Get("/health", metrics.HealthHandler())
 
+	// API Documentation
+	r.Get("/api/docs", metrics.SwaggerUIHandler())
+	r.Get("/api/docs/openapi.yaml", metrics.OpenAPISpecHandler("docs/openapi.yaml"))
+
 	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Public routes

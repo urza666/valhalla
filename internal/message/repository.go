@@ -249,6 +249,39 @@ func (r *Repository) GetReactionsBatch(ctx context.Context, messageIDs []int64, 
 	return result, nil
 }
 
+// GetPinnedMessages fetches all pinned messages for a channel directly.
+func (r *Repository) GetPinnedMessages(ctx context.Context, channelID int64) ([]Message, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT m.id, m.channel_id, m.content, m.edited_at, m.tts,
+		       m.mention_everyone, m.pinned, m.type, m.flags, m.reference_id, m.created_at,
+		       u.id, u.username, u.display_name, u.avatar_hash
+		FROM messages m
+		INNER JOIN users u ON u.id = m.author_id
+		WHERE m.channel_id = $1 AND m.pinned = true
+		ORDER BY m.id DESC
+	`, channelID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var messages []Message
+	for rows.Next() {
+		var msg Message
+		msg.Author = &Author{}
+		if err := rows.Scan(
+			&msg.ID, &msg.ChannelID, &msg.Content, &msg.EditedAt, &msg.TTS,
+			&msg.MentionEveryone, &msg.Pinned, &msg.Type, &msg.Flags,
+			&msg.ReferenceID, &msg.CreatedAt,
+			&msg.Author.ID, &msg.Author.Username, &msg.Author.DisplayName, &msg.Author.AvatarHash,
+		); err != nil {
+			return nil, err
+		}
+		messages = append(messages, msg)
+	}
+	return messages, nil
+}
+
 // GetChannelGuildID resolves the guild_id for a channel.
 func (r *Repository) GetChannelGuildID(ctx context.Context, channelID int64) int64 {
 	var guildID *int64

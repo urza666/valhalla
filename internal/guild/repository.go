@@ -380,3 +380,84 @@ func (r *Repository) SetSystemChannel(ctx context.Context, guildID, channelID in
 func (r *Repository) GetEveryoneRole(ctx context.Context, guildID int64) (*Role, error) {
 	return r.GetRole(ctx, guildID)
 }
+
+// UpdateRole applies partial updates to a role.
+func (r *Repository) UpdateRole(ctx context.Context, roleID int64, name *string, color *int, permissions *int64, hoist *bool, mentionable *bool) error {
+	if name != nil {
+		r.db.Exec(ctx, `UPDATE roles SET name = $2 WHERE id = $1`, roleID, *name)
+	}
+	if color != nil {
+		r.db.Exec(ctx, `UPDATE roles SET color = $2 WHERE id = $1`, roleID, *color)
+	}
+	if permissions != nil {
+		r.db.Exec(ctx, `UPDATE roles SET permissions = $2 WHERE id = $1`, roleID, *permissions)
+	}
+	if hoist != nil {
+		r.db.Exec(ctx, `UPDATE roles SET hoist = $2 WHERE id = $1`, roleID, *hoist)
+	}
+	if mentionable != nil {
+		r.db.Exec(ctx, `UPDATE roles SET mentionable = $2 WHERE id = $1`, roleID, *mentionable)
+	}
+	return nil
+}
+
+// DeleteRole removes a non-managed role.
+func (r *Repository) DeleteRole(ctx context.Context, roleID int64) error {
+	_, err := r.db.Exec(ctx, `DELETE FROM roles WHERE id = $1 AND managed = false`, roleID)
+	return err
+}
+
+// GetBans returns all bans for a guild with user info.
+func (r *Repository) GetBans(ctx context.Context, guildID int64) ([]Ban, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT b.guild_id, b.user_id, b.reason, u.id, u.username, u.display_name, u.avatar_hash
+		FROM bans b INNER JOIN users u ON u.id = b.user_id
+		WHERE b.guild_id = $1
+	`, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bans []Ban
+	for rows.Next() {
+		var b Ban
+		b.User = &MemberUser{}
+		rows.Scan(&b.GuildID, &b.UserID, &b.Reason, &b.User.ID, &b.User.Username, &b.User.DisplayName, &b.User.AvatarHash)
+		bans = append(bans, b)
+	}
+	return bans, nil
+}
+
+// AuditLogEntry represents a single audit log entry.
+type AuditLogEntry struct {
+	ID         int64   `json:"id,string"`
+	GuildID    int64   `json:"guild_id,string"`
+	UserID     *int64  `json:"user_id,string"`
+	TargetID   *int64  `json:"target_id,string"`
+	ActionType int     `json:"action_type"`
+	Reason     *string `json:"reason"`
+	Changes    any     `json:"changes"`
+	CreatedAt  string  `json:"created_at"`
+}
+
+// GetAuditLog returns the last 50 audit log entries for a guild.
+func (r *Repository) GetAuditLog(ctx context.Context, guildID int64) ([]AuditLogEntry, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT id, guild_id, user_id, target_id, action_type, reason, changes, created_at::text
+		FROM audit_log_entries WHERE guild_id = $1
+		ORDER BY id DESC LIMIT 50
+	`, guildID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []AuditLogEntry
+	for rows.Next() {
+		var e AuditLogEntry
+		rows.Scan(&e.ID, &e.GuildID, &e.UserID, &e.TargetID, &e.ActionType, &e.Reason, &e.Changes, &e.CreatedAt)
+		entries = append(entries, e)
+	}
+	return entries, nil
+}

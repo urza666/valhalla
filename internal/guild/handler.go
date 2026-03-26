@@ -253,23 +253,31 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 	var updates map[string]any
 	json.NewDecoder(r.Body).Decode(&updates)
 
-	// Apply updates
-	if name, ok := updates["name"].(string); ok {
-		h.service.repo.db.Exec(r.Context(), `UPDATE roles SET name = $2 WHERE id = $1`, roleID, name)
+	// Extract typed updates
+	var name *string
+	var color *int
+	var permissions *int64
+	var hoist, mentionable *bool
+
+	if v, ok := updates["name"].(string); ok {
+		name = &v
 	}
-	if color, ok := updates["color"].(float64); ok {
-		h.service.repo.db.Exec(r.Context(), `UPDATE roles SET color = $2 WHERE id = $1`, roleID, int(color))
+	if v, ok := updates["color"].(float64); ok {
+		c := int(v)
+		color = &c
 	}
-	if perms, ok := updates["permissions"].(string); ok {
-		p, _ := strconv.ParseInt(perms, 10, 64)
-		h.service.repo.db.Exec(r.Context(), `UPDATE roles SET permissions = $2 WHERE id = $1`, roleID, p)
+	if v, ok := updates["permissions"].(string); ok {
+		p, _ := strconv.ParseInt(v, 10, 64)
+		permissions = &p
 	}
-	if hoist, ok := updates["hoist"].(bool); ok {
-		h.service.repo.db.Exec(r.Context(), `UPDATE roles SET hoist = $2 WHERE id = $1`, roleID, hoist)
+	if v, ok := updates["hoist"].(bool); ok {
+		hoist = &v
 	}
-	if mentionable, ok := updates["mentionable"].(bool); ok {
-		h.service.repo.db.Exec(r.Context(), `UPDATE roles SET mentionable = $2 WHERE id = $1`, roleID, mentionable)
+	if v, ok := updates["mentionable"].(bool); ok {
+		mentionable = &v
 	}
+
+	h.service.repo.UpdateRole(r.Context(), roleID, name, color, permissions, hoist, mentionable)
 
 	role, err := h.service.repo.GetRole(r.Context(), roleID)
 	if err != nil {
@@ -285,8 +293,7 @@ func (h *Handler) UpdateRole(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) DeleteRole(w http.ResponseWriter, r *http.Request) {
 	roleID, _ := parseID(chi.URLParam(r, "roleID"))
 
-	_, err := h.service.repo.db.Exec(r.Context(), `DELETE FROM roles WHERE id = $1 AND managed = false`, roleID)
-	if err != nil {
+	if err := h.service.repo.DeleteRole(r.Context(), roleID); err != nil {
 		apierror.NewInternal("Failed to delete role").Write(w)
 		return
 	}
@@ -324,23 +331,10 @@ func (h *Handler) UnbanMember(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetBans(w http.ResponseWriter, r *http.Request) {
 	guildID, _ := parseID(chi.URLParam(r, "guildID"))
 
-	rows, err := h.service.repo.db.Query(r.Context(), `
-		SELECT b.guild_id, b.user_id, b.reason, u.id, u.username, u.display_name, u.avatar_hash
-		FROM bans b INNER JOIN users u ON u.id = b.user_id
-		WHERE b.guild_id = $1
-	`, guildID)
+	bans, err := h.service.repo.GetBans(r.Context(), guildID)
 	if err != nil {
 		apierror.NewInternal("Failed to fetch bans").Write(w)
 		return
-	}
-	defer rows.Close()
-
-	var bans []Ban
-	for rows.Next() {
-		var b Ban
-		b.User = &MemberUser{}
-		rows.Scan(&b.GuildID, &b.UserID, &b.Reason, &b.User.ID, &b.User.Username, &b.User.DisplayName, &b.User.AvatarHash)
-		bans = append(bans, b)
 	}
 	if bans == nil {
 		bans = []Ban{}
@@ -354,36 +348,13 @@ func (h *Handler) GetBans(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetAuditLog(w http.ResponseWriter, r *http.Request) {
 	guildID, _ := parseID(chi.URLParam(r, "guildID"))
 
-	rows, err := h.service.repo.db.Query(r.Context(), `
-		SELECT id, guild_id, user_id, target_id, action_type, reason, changes, created_at::text
-		FROM audit_log_entries WHERE guild_id = $1
-		ORDER BY id DESC LIMIT 50
-	`, guildID)
+	entries, err := h.service.repo.GetAuditLog(r.Context(), guildID)
 	if err != nil {
 		apierror.NewInternal("Failed to fetch audit log").Write(w)
 		return
 	}
-	defer rows.Close()
-
-	type AuditEntry struct {
-		ID         int64  `json:"id,string"`
-		GuildID    int64  `json:"guild_id,string"`
-		UserID     *int64 `json:"user_id,string"`
-		TargetID   *int64 `json:"target_id,string"`
-		ActionType int    `json:"action_type"`
-		Reason     *string `json:"reason"`
-		Changes    any    `json:"changes"`
-		CreatedAt  string `json:"created_at"`
-	}
-
-	var entries []AuditEntry
-	for rows.Next() {
-		var e AuditEntry
-		rows.Scan(&e.ID, &e.GuildID, &e.UserID, &e.TargetID, &e.ActionType, &e.Reason, &e.Changes, &e.CreatedAt)
-		entries = append(entries, e)
-	}
 	if entries == nil {
-		entries = []AuditEntry{}
+		entries = []AuditLogEntry{}
 	}
 
 	w.Header().Set("Content-Type", "application/json")

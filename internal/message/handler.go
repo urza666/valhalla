@@ -370,18 +370,10 @@ func (h *Handler) GetPinnedMessages(w http.ResponseWriter, r *http.Request) {
 	channelID, ok := apierror.RequireIDParam(w, r, "channelID")
 	if !ok { return }
 
-	messages, err := h.repo.GetMessages(r.Context(), channelID, MessagesQuery{Limit: 50})
+	pinned, err := h.repo.GetPinnedMessages(r.Context(), channelID)
 	if err != nil {
 		apierror.NewInternal("Failed to fetch pins").Write(w)
 		return
-	}
-
-	// Filter pinned only (simpler than a separate query for MVP)
-	var pinned []Message
-	for _, m := range messages {
-		if m.Pinned {
-			pinned = append(pinned, m)
-		}
 	}
 	if pinned == nil {
 		pinned = []Message{}

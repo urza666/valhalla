@@ -248,6 +248,11 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
     return SLASH_COMMANDS.filter(c => c.name.startsWith(slashFilter));
   };
 
+  // Mention autocomplete state
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionFilter, setMentionFilter] = useState('');
+  const [mentionMembers, setMentionMembers] = useState<{ id: string; username: string; display_name: string | null }[]>([]);
+
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setInput(val);
@@ -259,14 +264,59 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
       setSlashFilter(filter);
       setShowSlashMenu(true);
       setSelectedSlashIndex(0);
+      setShowMentions(false);
     } else {
       setShowSlashMenu(false);
+    }
+
+    // Detect @mention at cursor
+    const cursorPos = e.target.selectionStart || 0;
+    const textBefore = val.slice(0, cursorPos);
+    const mentionMatch = textBefore.match(/@(\w*)$/);
+    if (mentionMatch && !val.startsWith('/')) {
+      setMentionFilter(mentionMatch[1].toLowerCase());
+      setShowMentions(true);
+      // Load members lazily
+      if (mentionMembers.length === 0) {
+        import('../../stores/app').then(({ useAppStore }) => {
+          const guildId = useAppStore.getState().selectedGuildId;
+          if (guildId) {
+            api.getGuildMembers(guildId).then((members) => {
+              setMentionMembers(members.map((m) => ({
+                id: m.user_id,
+                username: m.user?.username || '',
+                display_name: m.user?.display_name || null,
+              })));
+            }).catch(() => {});
+          }
+        });
+      }
+    } else {
+      setShowMentions(false);
     }
 
     // Auto-resize textarea
     const ta = e.target;
     ta.style.height = 'auto';
     ta.style.height = Math.min(ta.scrollHeight, 200) + 'px';
+  };
+
+  const getFilteredMentions = () => {
+    if (!mentionFilter) return mentionMembers.slice(0, 8);
+    return mentionMembers.filter((m) =>
+      m.username.toLowerCase().includes(mentionFilter) ||
+      (m.display_name?.toLowerCase().includes(mentionFilter))
+    ).slice(0, 8);
+  };
+
+  const insertMention = (username: string) => {
+    const cursorPos = textareaRef.current?.selectionStart || input.length;
+    const textBefore = input.slice(0, cursorPos);
+    const textAfter = input.slice(cursorPos);
+    const mentionStart = textBefore.lastIndexOf('@');
+    setInput(textBefore.slice(0, mentionStart) + `@${username} ` + textAfter);
+    setShowMentions(false);
+    textareaRef.current?.focus();
   };
 
   const insertEmoji = (emoji: string) => {
@@ -306,6 +356,22 @@ export function Composer({ channelId, channelName, onTyping, replyToId, onReplyS
               <div className="slash-menu-desc">Kein passender Befehl</div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Mention autocomplete */}
+      {showMentions && getFilteredMentions().length > 0 && (
+        <div className="slash-menu">
+          {getFilteredMentions().map((m) => (
+            <div
+              key={m.id}
+              className="slash-menu-item"
+              onClick={() => insertMention(m.username)}
+            >
+              <div className="slash-menu-name">@{m.username}</div>
+              {m.display_name && <div className="slash-menu-desc">{m.display_name}</div>}
+            </div>
+          ))}
         </div>
       )}
 

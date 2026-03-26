@@ -5,12 +5,15 @@ import { useSettingsStore } from './stores/settings';
 import { AuthPage } from './components/layout/AuthPage';
 import { AppLayout } from './components/layout/AppLayout';
 import { ToastContainer } from './components/common/ToastContainer';
+import { KeyboardShortcuts } from './components/common/KeyboardShortcuts';
+import { useUnreadStore } from './stores/unread';
 import type { Message } from './api/client';
 
 export function App() {
   const { user, gateway, isLoading, restore } = useAuthStore();
-  const { addMessage, updateMessage, removeMessage } = useAppStore();
+  const { addMessage, updateMessage, removeMessage, selectedChannelId } = useAppStore();
   const { sendNotification } = useSettingsStore();
+  const { incrementUnread } = useUnreadStore();
 
   // Restore session on mount
   useEffect(() => {
@@ -25,6 +28,10 @@ export function App() {
       gateway.on('MESSAGE_CREATE', (data) => {
         const msg = data as Message;
         addMessage(msg);
+        // Unread badge for non-active channels
+        if (msg.channel_id !== selectedChannelId && msg.author.id !== user?.id) {
+          incrementUnread(msg.channel_id);
+        }
         // Desktop notification for messages from others
         if (msg.author.id !== user?.id) {
           sendNotification(
@@ -64,6 +71,7 @@ export function App() {
     <>
       <AppLayout />
       <ToastContainer />
+      <KeyboardShortcuts />
     </>
   );
 }

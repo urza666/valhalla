@@ -10,6 +10,7 @@ import { InviteDialog } from '../admin/InviteDialog';
 import { ChannelSettings } from '../admin/ChannelSettings';
 import { api } from '../../api/client';
 import { toast } from '../../stores/toast';
+import { useUnreadStore } from '../../stores/unread';
 import type { Guild, User, Channel } from '../../api/client';
 
 interface Props {
@@ -178,6 +179,8 @@ function ChannelItem({ channel, active, onClick, guildId, onContextMenu }: {
   onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const { joinChannel, channelId: voiceChannelId } = useVoiceStore();
+  const unreadCount = useUnreadStore((s) => s.unreadCounts.get(channel.id) || 0);
+  const { markRead } = useUnreadStore();
   const isVoice = channel.type === 2;
   const icon = isVoice ? '🔊' : '#';
   const isVoiceActive = isVoice && voiceChannelId === channel.id;
@@ -187,18 +190,23 @@ function ChannelItem({ channel, active, onClick, guildId, onContextMenu }: {
       joinChannel(guildId, channel.id);
     } else {
       onClick();
+      // Mark as read when clicking
+      if (unreadCount > 0) markRead(channel.id, '');
     }
   };
 
   return (
     <>
       <div
-        className={`channel-item ${active && !isVoice ? 'active' : ''} ${isVoiceActive ? 'active' : ''}`}
+        className={`channel-item ${active && !isVoice ? 'active' : ''} ${isVoiceActive ? 'active' : ''} ${unreadCount > 0 ? 'unread' : ''}`}
         onClick={handleClick}
         onContextMenu={onContextMenu}
       >
         <span className="hash">{icon}</span>
-        {channel.name}
+        <span style={{ flex: 1 }}>{channel.name}</span>
+        {unreadCount > 0 && (
+          <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+        )}
       </div>
       {isVoice && <VoiceChannel channelId={channel.id} guildId={guildId} />}
     </>
