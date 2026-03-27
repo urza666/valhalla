@@ -11,10 +11,11 @@ interface Props {
   channelId: string;
   onReply: (message: Message) => void;
   onEdit: (message: Message) => void;
+  onThread?: (message: Message) => void;
   children: React.ReactNode;
 }
 
-export function MessageActions({ message, channelId, onReply, onEdit, children }: Props) {
+export function MessageActions({ message, channelId, onReply, onEdit, onThread, children }: Props) {
   const { user } = useAuthStore();
   const { removeMessage } = useAppStore();
   const ctx = useContextMenu();
@@ -26,6 +27,7 @@ export function MessageActions({ message, channelId, onReply, onEdit, children }
 
   const menuItems: MenuItem[] = [
     { label: 'Antworten', icon: '↩️', onClick: () => onReply(message) },
+    ...(onThread ? [{ label: 'Thread erstellen', icon: '💬', onClick: () => onThread(message) }] : []),
     { label: 'Reaktion hinzufügen', icon: '😀', onClick: () => setShowReactionPicker(true) },
     { label: 'Nachricht pinnen', icon: '📌', onClick: () => pinMsg(channelId, message.id) },
     { label: 'Link kopieren', icon: '🔗', onClick: () => copyMessageLink(channelId, message.id) },
@@ -83,6 +85,9 @@ export function MessageActions({ message, channelId, onReply, onEdit, children }
           <button onClick={(e) => { e.stopPropagation(); setShowReactionPicker(!showReactionPicker); }} title="Reaktion">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
           </button>
+          {onThread && <button onClick={() => onThread(message)} title="Thread">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </button>}
           {isAuthor && <button onClick={() => onEdit(message)} title="Bearbeiten">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>}

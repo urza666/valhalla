@@ -6,6 +6,7 @@ import { TypingIndicator } from './TypingIndicator';
 import { Markdown } from './Markdown';
 import { Composer } from './Composer';
 import { MessageActions } from './MessageActions';
+import { ThreadPanel } from './ThreadPanel';
 import { KanbanBoard } from '../kanban/KanbanBoard';
 import { WikiView } from '../wiki/WikiView';
 import { SearchPanel } from './SearchPanel';
@@ -30,6 +31,7 @@ export function ChatView({ channelId }: Props) {
   const [pins, setPins] = useState<Message[]>([]);
   const [pinsLoading, setPinsLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [threadMsg, setThreadMsg] = useState<Message | null>(null);
 
   const guildChannels = channels.get(selectedGuildId || '') || [];
   const channel = guildChannels.find((c) => c.id === channelId);
@@ -48,6 +50,7 @@ export function ChatView({ channelId }: Props) {
     setEditingMsg(null);
     setShowSearch(false);
     setShowPins(false);
+    setThreadMsg(null);
   }, [channelId]);
 
   // Ctrl+K to toggle search
@@ -203,6 +206,7 @@ export function ChatView({ channelId }: Props) {
               channelId={channelId}
               onReply={(m) => setReplyTo(m)}
               onEdit={(m) => setEditingMsg(m)}
+              onThread={(m) => setThreadMsg(m)}
             >
               <MessageItem
                 message={msg}
@@ -288,6 +292,15 @@ export function ChatView({ channelId }: Props) {
       {/* Search panel */}
       {showSearch && selectedGuildId && (
         <SearchPanel guildId={selectedGuildId} onClose={() => setShowSearch(false)} />
+      )}
+
+      {/* Thread panel */}
+      {threadMsg && (
+        <ThreadPanel
+          message={threadMsg}
+          channelId={channelId}
+          onClose={() => setThreadMsg(null)}
+        />
       )}
     </main>
   );

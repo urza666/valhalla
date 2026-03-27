@@ -48,6 +48,21 @@
   --radius-md: 4px;
   --radius-lg: 8px;
   --radius-full: 50%;
+
+  /* Voice/Chat — Discord-compatible colors */
+  --color-voice-accent: #5865f2;
+  --color-voice-accent-hover: #4752c4;
+  --color-voice-surface: #1e1f22;
+  --color-voice-surface-alt: #313338;
+  --color-voice-surface-modal: #2b2d31;
+  --color-voice-online: #3ba55d;
+  --color-voice-idle: #faa81a;
+  --color-voice-dnd: #ed4245;
+  --color-voice-offline: #747f8d;
+  --color-voice-text: #dcddde;
+  --color-voice-text-muted: #96989d;
+  --color-voice-link: #00aff4;
+  --color-voice-border: rgba(255,255,255,0.08);
 }
 
 /* Interactive surface colors (theme-aware) */
@@ -2308,6 +2323,30 @@ select:focus-visible {
 .btn-danger:hover {
   filter: brightness(1.15);
 }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-ghost:hover {
+  background: var(--interactive-hover);
+  color: var(--text-primary);
+}
+
+.btn-xs { padding: 4px 8px; font-size: 11px; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-lg { padding: 12px 24px; font-size: 16px; }
+.btn-full { width: 100%; }
+.btn-disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.btn-icon, .btn-icon-right { display: inline-flex; align-items: center; }
+.btn-icon { margin-right: 6px; }
+.btn-icon-right { margin-left: 6px; }
 
 /* Animations */
 @keyframes speakPulse {

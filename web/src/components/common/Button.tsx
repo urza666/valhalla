@@ -1,16 +1,21 @@
 import { type ButtonHTMLAttributes, type ReactNode } from 'react';
+import clsx from 'clsx';
 
-type ButtonVariant = 'primary' | 'secondary' | 'danger';
-type ButtonSize = 'sm' | 'md' | 'lg';
+type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
+type ButtonSize = 'xs' | 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   loading?: boolean;
-  children: ReactNode;
+  icon?: ReactNode;
+  iconRight?: ReactNode;
+  fullWidth?: boolean;
+  children?: ReactNode;
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
+  xs: 'btn-xs',
   sm: 'btn-sm',
   md: '',
   lg: 'btn-lg',
@@ -20,21 +25,37 @@ export function Button({
   variant = 'primary',
   size = 'md',
   loading = false,
+  icon,
+  iconRight,
+  fullWidth = false,
   children,
-  className = '',
+  className,
   disabled,
+  style,
   ...props
 }: ButtonProps) {
-  const variantClass = `btn-${variant}`;
-  const sizeClass = sizeClasses[size];
-
   return (
     <button
-      className={`${variantClass} ${sizeClass} ${className}`.trim()}
+      className={clsx(
+        variant === 'ghost' ? 'btn-ghost' : `btn-${variant}`,
+        sizeClasses[size],
+        fullWidth && 'btn-full',
+        (disabled || loading) && 'btn-disabled',
+        className,
+      )}
       disabled={disabled || loading}
+      style={style}
       {...props}
     >
-      {loading ? <LoadingDots /> : children}
+      {loading ? (
+        <LoadingDots />
+      ) : (
+        <>
+          {icon && <span className="btn-icon">{icon}</span>}
+          {children}
+          {iconRight && <span className="btn-icon-right">{iconRight}</span>}
+        </>
+      )}
     </button>
   );
 }

@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+/**
+ * UserProfilePopout — Discord-style profile card with banner, avatar, bio, and actions.
+ * Enhanced from LPP with richer design. Uses Valhalla Go API.
+ */
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../../api/client';
+import { useAuthStore } from '../../stores/auth';
 import { toast } from '../../stores/toast';
+import { UserAvatar } from './UserAvatar';
 
 interface Props {
   userId: string;
@@ -9,18 +16,28 @@ interface Props {
   onClose: () => void;
 }
 
+interface ProfileData {
+  id: string;
+  username: string;
+  display_name: string | null;
+  avatar: string | null;
+  bio: string | null;
+}
+
 export function UserProfilePopout({ userId, x, y, onClose }: Props) {
-  const [profile, setProfile] = useState<any>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const currentUser = useAuthStore((s) => s.user);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(false);
+  const isMe = userId === currentUser?.id;
 
   useEffect(() => {
-    api.getUserProfile(userId).then(setProfile).catch(() => {});
+    api.getUserProfile(userId).then((p) => setProfile(p as ProfileData)).catch(() => {});
   }, [userId]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      const el = document.getElementById('user-popout');
-      if (el && !el.contains(e.target as Node)) onClose();
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
     const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('mousedown', handleClick);
@@ -33,31 +50,31 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
 
   if (!profile) return null;
 
-  const adjustedX = Math.min(x, window.innerWidth - 320);
-  const adjustedY = Math.min(y, window.innerHeight - 350);
+  const adjustedX = Math.min(x, window.innerWidth - 340);
+  const adjustedY = Math.min(y, window.innerHeight - 380);
+  const displayName = profile.display_name || profile.username;
 
   const openDM = async () => {
-    if (loading) return;
+    if (loading || isMe) return;
     setLoading(true);
     try {
       const channel = await api.createDM(userId);
-      // Store DM channel info and navigate — dispatch custom event for AppLayout
       window.dispatchEvent(new CustomEvent('valhalla:open-dm', {
-        detail: { channelId: channel.id, recipientName: profile.display_name || profile.username },
+        detail: { channelId: channel.id, recipientName: displayName },
       }));
-      toast.success(`DM mit ${profile.display_name || profile.username} geöffnet`);
+      toast.success(`DM mit ${displayName} geoeffnet`);
       onClose();
-    } catch (err: any) {
-      if (err?.status === 409 || err?.message?.includes('already')) {
-        // DM already exists — try to navigate anyway
+    } catch (err: unknown) {
+      const apiErr = err as { status?: number; message?: string };
+      if (apiErr?.status === 409 || apiErr?.message?.includes('already')) {
         try {
           const dms = await api.getMyDMs();
-          const existingDm = dms.find((dm) => dm.recipient?.id === userId);
-          if (existingDm) {
+          const existing = dms.find((dm) => dm.recipient?.id === userId);
+          if (existing) {
             window.dispatchEvent(new CustomEvent('valhalla:open-dm', {
-              detail: { channelId: existingDm.id, recipientName: profile.display_name || profile.username },
+              detail: { channelId: existing.id, recipientName: displayName },
             }));
-            toast.success(`DM mit ${profile.display_name || profile.username} geöffnet`);
+            toast.success(`DM mit ${displayName} geoeffnet`);
             onClose();
             return;
           }
@@ -74,55 +91,99 @@ export function UserProfilePopout({ userId, x, y, onClose }: Props) {
       await api.sendFriendRequest(profile.username);
       toast.success('Freundschaftsanfrage gesendet');
     } catch {
-      toast.error('Anfrage konnte nicht gesendet werden');
+      toast.error('Anfrage fehlgeschlagen');
     }
   };
 
-  return (
+  return createPortal(
     <div
-      id="user-popout"
-      className="user-popout"
-      style={{ left: adjustedX, top: adjustedY }}
+      ref={ref}
+      style={{
+        position: 'fixed',
+        left: adjustedX,
+        top: adjustedY,
+        zIndex: 9998,
+        width: 320,
+        background: 'var(--color-voice-surface-modal, var(--bg-tertiary))',
+        borderRadius: 12,
+        boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+        border: '1px solid var(--color-voice-border)',
+        overflow: 'hidden',
+        animation: 'fadeIn 150ms ease-out',
+      }}
     >
-      {/* Banner area */}
-      <div className="user-popout-banner" />
+      {/* Banner */}
+      <div style={{
+        height: 60,
+        background: 'linear-gradient(135deg, var(--color-voice-accent), var(--brand-primary))',
+        position: 'relative',
+      }} />
 
-      {/* Avatar */}
-      <div className="user-popout-avatar">
-        {(profile.username || '?')[0].toUpperCase()}
+      {/* Avatar — overlapping banner */}
+      <div style={{ position: 'relative', padding: '0 1rem', marginTop: -28 }}>
+        <div style={{
+          display: 'inline-block',
+          border: '4px solid var(--color-voice-surface-modal, var(--bg-tertiary))',
+          borderRadius: '50%',
+        }}>
+          <UserAvatar
+            user={{ id: profile.id, username: profile.username, display_name: profile.display_name, avatar: profile.avatar }}
+            size={56}
+          />
+        </div>
       </div>
 
       {/* Info */}
-      <div className="user-popout-body">
-        <div className="user-popout-name">{profile.display_name || profile.username}</div>
-        <div className="user-popout-tag">@{profile.username}</div>
+      <div style={{ padding: '0.5rem 1rem 1rem' }}>
+        <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--text-primary)' }}>
+          {displayName}
+        </div>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+          @{profile.username}
+        </div>
 
+        {/* Bio */}
         {profile.bio && (
-          <div className="user-popout-section">
-            <div className="user-popout-section-title">Über mich</div>
-            <div className="user-popout-bio">{profile.bio}</div>
+          <div style={{
+            padding: '0.5rem',
+            background: 'var(--color-voice-surface, var(--bg-secondary))',
+            borderRadius: 8,
+            marginBottom: '0.6rem',
+          }}>
+            <div style={{ fontSize: '0.6rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.2rem' }}>
+              About
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+              {profile.bio}
+            </div>
           </div>
         )}
 
-        <div className="user-popout-actions">
-          <button
-            className="btn"
-            style={{ flex: 1, fontSize: 14, padding: '8px 12px' }}
-            onClick={openDM}
-            disabled={loading}
-          >
-            {loading ? 'Wird geöffnet...' : 'Nachricht senden'}
-          </button>
-          <button
-            className="btn"
-            style={{ width: 'auto', fontSize: 14, padding: '8px 12px', background: 'var(--bg-tertiary)', color: 'var(--text-secondary)' }}
-            onClick={sendFriend}
-            title="Freundschaftsanfrage senden"
-          >
-            ➕
-          </button>
-        </div>
+        {/* Actions */}
+        {!isMe && (
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            <button
+              className="btn-primary"
+              style={{ flex: 1, fontSize: 13, padding: '8px 12px' }}
+              onClick={openDM}
+              disabled={loading}
+            >
+              {loading ? 'Wird geoeffnet...' : 'Nachricht senden'}
+            </button>
+            <button
+              className="btn-secondary"
+              style={{ width: 'auto', fontSize: 13, padding: '8px 12px' }}
+              onClick={sendFriend}
+              title="Freundschaftsanfrage senden"
+            >
+              <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

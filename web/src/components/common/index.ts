@@ -1,9 +1,14 @@
 export { Button } from './Button';
-export { Card } from './Card';
+export { Card, CardHeader, CardTitle } from './Card';
 export { StatusBadge } from './StatusBadge';
 export { Modal } from './Modal';
 export { LoadingSpinner } from './LoadingSpinner';
 export { UserAvatar } from './UserAvatar';
+export type { UserAvatarUser } from './UserAvatar';
 export { PresenceBadge } from './PresenceBadge';
 export { ErrorBoundary } from './ErrorBoundary';
 export { ToastContainer } from './ToastContainer';
+export { ContextMenu, useContextMenu } from './ContextMenu';
+export { UserContextMenu, useUserContextMenu } from './UserContextMenu';
+export type { UserTarget } from './UserContextMenu';
+export { UserProfilePopout } from './UserProfilePopout';
