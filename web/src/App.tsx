@@ -3,13 +3,13 @@ import { useAuthStore } from './stores/auth';
 import { useAppStore } from './stores/app';
 import { useSettingsStore } from './stores/settings';
 import { AuthPage } from './components/layout/AuthPage';
-import { AppLayout } from './components/layout/AppLayout';
 import { ToastContainer } from './components/common/ToastContainer';
-import { KeyboardShortcuts } from './components/common/KeyboardShortcuts';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { useUnreadStore } from './stores/unread';
 import { api } from './api/client';
 import { toast } from './stores/toast';
+import { LoadingSpinner } from './components/ui/LoadingSpinner';
+import { VoiceView } from './features/voice/VoiceView';
 import type { Message } from './api/client';
 
 export function App() {
@@ -24,29 +24,23 @@ export function App() {
     restore();
   }, [restore]);
 
-  // Handle invite links: /invite/CODE or /join/CODE
+  // Handle invite links
   useEffect(() => {
     if (!user || inviteHandled) return;
-
     const path = window.location.pathname;
     const inviteMatch = path.match(/^\/(invite|join)\/([A-Za-z0-9_-]+)/);
     if (inviteMatch) {
       const code = inviteMatch[2];
       setInviteHandled(true);
-
       api.joinGuild(code)
         .then((data) => {
           toast.success(`Server "${data.guild.name}" beigetreten!`);
           loadGuilds();
-          // Clean URL
           window.history.replaceState({}, '', '/');
         })
         .catch((err) => {
-          if (err?.status === 409) {
-            toast.info('Du bist bereits Mitglied dieses Servers');
-          } else {
-            toast.error('Einladung ungültig oder abgelaufen');
-          }
+          if (err?.status === 409) toast.info('Du bist bereits Mitglied dieses Servers');
+          else toast.error('Einladung ungueltig oder abgelaufen');
           window.history.replaceState({}, '', '/');
         });
     }
@@ -55,16 +49,13 @@ export function App() {
   // Subscribe to gateway events
   useEffect(() => {
     if (!gateway) return;
-
     const unsubs = [
       gateway.on('MESSAGE_CREATE', (data) => {
         const msg = data as Message;
         addMessage(msg);
-        // Unread badge for non-active channels
         if (msg.channel_id !== selectedChannelId && msg.author.id !== user?.id) {
           incrementUnread(msg.channel_id);
         }
-        // Desktop notification for messages from others
         if (msg.author.id !== user?.id) {
           sendNotification(
             msg.author.display_name || msg.author.username,
@@ -72,14 +63,11 @@ export function App() {
           );
         }
       }),
-      gateway.on('MESSAGE_UPDATE', (data) => {
-        updateMessage(data as Message);
-      }),
+      gateway.on('MESSAGE_UPDATE', (data) => updateMessage(data as Message)),
       gateway.on('MESSAGE_DELETE', (data) => {
         const { id, channel_id } = data as { id: string; channel_id: string };
         removeMessage(channel_id, id);
       }),
-      // Real-time reaction updates
       gateway.on('MESSAGE_REACTION_ADD', (data) => {
         const { channel_id, message_id, emoji, user_id } = data as { channel_id: string; message_id: string; emoji: string; user_id: string };
         addReaction(channel_id, message_id, emoji, user_id);
@@ -89,30 +77,25 @@ export function App() {
         removeReaction(channel_id, message_id, emoji, user_id);
       }),
     ];
-
     return () => unsubs.forEach((unsub) => unsub());
   }, [gateway, addMessage, updateMessage, removeMessage, addReaction, removeReaction, selectedChannelId, user?.id, incrementUnread, sendNotification]);
 
   if (isLoading) {
     return (
       <div className="auth-container">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-          <div className="loading-spinner large" />
-          <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Verbindung wird hergestellt...</div>
-        </div>
+        <LoadingSpinner size="lg" />
+        <div style={{ color: 'var(--text-muted)', fontSize: 14, textAlign: 'center', marginTop: 8 }}>Verbindung wird hergestellt...</div>
       </div>
     );
   }
 
-  if (!user) {
-    return <AuthPage />;
-  }
+  if (!user) return <AuthPage />;
 
   return (
     <ErrorBoundary>
-      <AppLayout />
+      <VoiceView />
       <ToastContainer />
-      <KeyboardShortcuts />
     </ErrorBoundary>
   );
 }
+
