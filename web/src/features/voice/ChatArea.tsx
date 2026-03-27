@@ -27,7 +27,6 @@ interface Props {
 
 export function ChatArea({ channelId, channelName, guildId, viewMode, onSetViewMode }: Props) {
   const messages = useAppStore((s) => s.messages.get(channelId) || []);
-  const { loadMessages } = useAppStore();
   const user = useAuthStore((s) => s.user);
   const endRef = useRef<HTMLDivElement>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -38,7 +37,7 @@ export function ChatArea({ channelId, channelName, guildId, viewMode, onSetViewM
   const [hoverMsgId, setHoverMsgId] = useState<string | null>(null);
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
 
-  useEffect(() => { loadMessages(channelId); }, [channelId, loadMessages]);
+  useEffect(() => { useAppStore.getState().loadMessages(channelId); }, [channelId]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
   useEffect(() => { setReplyTo(null); setEditingId(null); }, [channelId]);
 

@@ -20,9 +20,9 @@ interface Props {
 
 export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView }: Props) {
   const user = useAuthStore((s) => s.user);
-  const { channels, selectedChannelId, selectChannel, loadGuilds } = useAppStore();
+  const guildChannels = useAppStore((s) => s.channels.get(guild.id) || []);
+  const selectedChannelId = useAppStore((s) => s.selectedChannelId);
   const { joinChannel, channelId: voiceChannelId, connected, selfMute, selfDeaf, toggleMute, toggleDeaf, leaveChannel } = useVoiceStore();
-  const guildChannels = channels.get(guild.id) || [];
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState<0 | 2>(0);
@@ -35,7 +35,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
     if (!newChannelName.trim()) return;
     try {
       await api.createChannel(guild.id, newChannelName.trim(), newChannelType);
-      loadGuilds();
+      useAppStore.getState().loadGuilds();
       setNewChannelName('');
       setShowCreateChannel(false);
     } catch { toast.error('Kanal konnte nicht erstellt werden'); }
@@ -76,7 +76,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
         {uncategorized.filter(c => c.type === 0).map((ch) => (
           <ChannelItem key={ch.id} channel={ch}
             active={ch.id === selectedChannelId && activeView === 'chat'}
-            onSelect={() => { selectChannel(ch.id); onSetView('chat'); onChannelSelected?.(); }} />
+            onSelect={() => { useAppStore.getState().selectChannel(ch.id); onSetView('chat'); onChannelSelected?.(); }} />
         ))}
 
         {categories.map((cat) => {
@@ -91,7 +91,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
                   active={ch.id === selectedChannelId && activeView === 'chat'}
                   onSelect={() => {
                     if (ch.type === 2) joinChannel(guild.id, ch.id);
-                    else { selectChannel(ch.id); onSetView('chat'); onChannelSelected?.(); }
+                    else { useAppStore.getState().selectChannel(ch.id); onSetView('chat'); onChannelSelected?.(); }
                   }} />
               ))}
             </div>

@@ -17,8 +17,6 @@ export function VoiceView() {
   const selectedGuildId = useAppStore((s) => s.selectedGuildId);
   const selectedChannelId = useAppStore((s) => s.selectedChannelId);
   const channels = useAppStore((s) => s.channels);
-  const selectGuild = useAppStore((s) => s.selectGuild);
-  const selectChannel = useAppStore((s) => s.selectChannel);
   const [showFriends, setShowFriends] = useState(false);
   const [dmChannelId, setDmChannelId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'chat' | 'board' | 'wiki' | 'friends'>('chat');
@@ -38,12 +36,12 @@ export function VoiceView() {
         setDmChannelId(detail.channelId);
         setShowFriends(false);
         setActiveView('chat');
-        selectChannel(detail.channelId);
+        useAppStore.getState().selectChannel(detail.channelId);
       }
     };
     window.addEventListener('valhalla:open-dm', handler);
     return () => window.removeEventListener('valhalla:open-dm', handler);
-  }, [selectChannel]);
+  }, []);
 
   const selectedGuild = guilds.find((g) => g.id === selectedGuildId);
 
@@ -51,7 +49,7 @@ export function VoiceView() {
     setShowFriends(false);
     setDmChannelId(null);
     setActiveView('chat');
-    selectGuild(id);
+    useAppStore.getState().selectGuild(id);
   };
 
   const showDm = dmChannelId && selectedChannelId === dmChannelId;

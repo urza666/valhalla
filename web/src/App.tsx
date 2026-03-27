@@ -13,16 +13,16 @@ import { VoiceView } from './features/voice/VoiceView';
 import type { Message } from './api/client';
 
 export function App() {
-  const { user, gateway, isLoading, restore } = useAuthStore();
-  const { addMessage, updateMessage, removeMessage, addReaction, removeReaction, selectedChannelId, loadGuilds } = useAppStore();
-  const { sendNotification } = useSettingsStore();
-  const { incrementUnread } = useUnreadStore();
+  const user = useAuthStore((s) => s.user);
+  const gateway = useAuthStore((s) => s.gateway);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  // Note: selectedChannelId read via getState() in event handlers
   const [inviteHandled, setInviteHandled] = useState(false);
 
   // Restore session on mount
   useEffect(() => {
-    restore();
-  }, [restore]);
+    useAuthStore.getState().restore();
+  }, []);
 
   // Handle invite links
   useEffect(() => {
@@ -35,7 +35,7 @@ export function App() {
       api.joinGuild(code)
         .then((data) => {
           toast.success(`Server "${data.guild.name}" beigetreten!`);
-          loadGuilds();
+          useAppStore.getState().loadGuilds();
           window.history.replaceState({}, '', '/');
         })
         .catch((err) => {
@@ -44,7 +44,7 @@ export function App() {
           window.history.replaceState({}, '', '/');
         });
     }
-  }, [user, inviteHandled, loadGuilds]);
+  }, [user, inviteHandled]);
 
   // Subscribe to gateway events
   useEffect(() => {
@@ -52,33 +52,35 @@ export function App() {
     const unsubs = [
       gateway.on('MESSAGE_CREATE', (data) => {
         const msg = data as Message;
-        addMessage(msg);
-        if (msg.channel_id !== selectedChannelId && msg.author.id !== user?.id) {
-          incrementUnread(msg.channel_id);
+        useAppStore.getState().addMessage(msg);
+        const currentChannel = useAppStore.getState().selectedChannelId;
+        const currentUser = useAuthStore.getState().user;
+        if (msg.channel_id !== currentChannel && msg.author.id !== currentUser?.id) {
+          useUnreadStore.getState().incrementUnread(msg.channel_id);
         }
-        if (msg.author.id !== user?.id) {
-          sendNotification(
+        if (msg.author.id !== currentUser?.id) {
+          useSettingsStore.getState().sendNotification(
             msg.author.display_name || msg.author.username,
             msg.content.length > 100 ? msg.content.slice(0, 100) + '...' : msg.content
           );
         }
       }),
-      gateway.on('MESSAGE_UPDATE', (data) => updateMessage(data as Message)),
+      gateway.on('MESSAGE_UPDATE', (data) => useAppStore.getState().updateMessage(data as Message)),
       gateway.on('MESSAGE_DELETE', (data) => {
         const { id, channel_id } = data as { id: string; channel_id: string };
-        removeMessage(channel_id, id);
+        useAppStore.getState().removeMessage(channel_id, id);
       }),
       gateway.on('MESSAGE_REACTION_ADD', (data) => {
         const { channel_id, message_id, emoji, user_id } = data as { channel_id: string; message_id: string; emoji: string; user_id: string };
-        addReaction(channel_id, message_id, emoji, user_id);
+        useAppStore.getState().addReaction(channel_id, message_id, emoji, user_id);
       }),
       gateway.on('MESSAGE_REACTION_REMOVE', (data) => {
         const { channel_id, message_id, emoji, user_id } = data as { channel_id: string; message_id: string; emoji: string; user_id: string };
-        removeReaction(channel_id, message_id, emoji, user_id);
+        useAppStore.getState().removeReaction(channel_id, message_id, emoji, user_id);
       }),
     ];
     return () => unsubs.forEach((unsub) => unsub());
-  }, [gateway, addMessage, updateMessage, removeMessage, addReaction, removeReaction, selectedChannelId, user?.id, incrementUnread, sendNotification]);
+  }, [gateway]);
 
   if (isLoading) {
     return (
