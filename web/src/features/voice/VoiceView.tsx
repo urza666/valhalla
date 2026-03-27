@@ -5,7 +5,6 @@
  * All data from Valhalla stores (WebSocket events) + api/client.ts (fetch).
  */
 import { useEffect, useState } from 'react';
-import { useAuthStore } from '../../stores/auth';
 import { useAppStore } from '../../stores/app';
 import { ServerBar } from './ServerBar';
 import { ChannelSidebar } from './ChannelSidebar';
@@ -14,13 +13,17 @@ import { FriendsPanel } from './FriendsPanel';
 import { MembersPanel } from './MembersPanel';
 
 export function VoiceView() {
-  useAuthStore();
-  const { guilds, selectedGuildId, selectedChannelId, loadGuilds, selectGuild, selectChannel, channels } = useAppStore();
+  const guilds = useAppStore((s) => s.guilds);
+  const selectedGuildId = useAppStore((s) => s.selectedGuildId);
+  const selectedChannelId = useAppStore((s) => s.selectedChannelId);
+  const channels = useAppStore((s) => s.channels);
+  const selectGuild = useAppStore((s) => s.selectGuild);
+  const selectChannel = useAppStore((s) => s.selectChannel);
   const [showFriends, setShowFriends] = useState(false);
   const [dmChannelId, setDmChannelId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'chat' | 'board' | 'wiki' | 'friends'>('chat');
 
-  useEffect(() => { loadGuilds(); }, [loadGuilds]);
+  useEffect(() => { useAppStore.getState().loadGuilds(); }, []);
 
   // DM open events
   useEffect(() => {
