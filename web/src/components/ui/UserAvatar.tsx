@@ -61,7 +61,8 @@ export function UserAvatar({
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = 'none';
-              (e.target as HTMLImageElement).parentElement!.textContent = initial;
+              const parent = (e.target as HTMLImageElement).parentElement;
+              if (parent) parent.textContent = initial;
             }}
           />
         </div>

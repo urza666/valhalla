@@ -56,7 +56,7 @@ export function ServerBar({ guilds, selectedGuildId, onSelectGuild, onShowFriend
             active={guild.id === selectedGuildId}
             onClick={() => onSelectGuild(guild.id)}
             title={guild.name}
-            label={getInitials(guild.name)}
+            label={guild.name ? getInitials(guild.name) : '?'}
             iconUrl={guild.icon ? `/api/v1/assets/icons/${guild.id}/${guild.icon}` : undefined}
             badge={unread > 0 ? (unread > 99 ? '99+' : String(unread)) : undefined}
           />

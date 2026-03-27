@@ -34,7 +34,12 @@ export function UserProfilePopout({ userId, x, y, onClose }: {
   const stableClose = useCallback(() => onCloseRef.current(), []);
 
   useEffect(() => {
-    api.getUserProfile(userId).then((p) => setProfile(p as ProfileData)).catch(() => {});
+    api.getUserProfile(userId)
+      .then((p) => setProfile(p as ProfileData))
+      .catch((err) => {
+        console.warn('[UserProfilePopout] Failed to load profile:', err);
+        setProfile(null);
+      });
   }, [userId]);
 
   useEffect(() => {

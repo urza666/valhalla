@@ -34,45 +34,62 @@ export const useAppStore = create<AppState>((set, get) => ({
   messages: new Map(),
 
   loadGuilds: async () => {
-    const guilds = await api.getMyGuilds();
-    set({ guilds });
+    try {
+      const guilds = await api.getMyGuilds();
+      set({ guilds });
+    } catch (err) {
+      console.error('[AppStore] Failed to load guilds:', err);
+      set({ guilds: [] });
+    }
   },
 
   selectGuild: async (guildId) => {
     set({ selectedGuildId: guildId, selectedChannelId: null });
 
-    if (!get().channels.has(guildId)) {
-      const channels = await api.getGuildChannels(guildId);
-      set((state) => {
-        const newChannels = new Map(state.channels);
-        newChannels.set(guildId, channels);
-        return { channels: newChannels };
-      });
-    }
+    try {
+      if (!get().channels.has(guildId)) {
+        const channels = await api.getGuildChannels(guildId);
+        set((state) => {
+          const newChannels = new Map(state.channels);
+          newChannels.set(guildId, channels);
+          return { channels: newChannels };
+        });
+      }
 
-    // Auto-select first text channel
-    const channels = get().channels.get(guildId);
-    const firstText = channels?.find((c) => c.type === 0);
-    if (firstText) {
-      get().selectChannel(firstText.id);
+      // Auto-select first text channel
+      const channels = get().channels.get(guildId);
+      const firstText = channels?.find((c) => c.type === 0);
+      if (firstText) {
+        get().selectChannel(firstText.id);
+      }
+    } catch (err) {
+      console.error('[AppStore] selectGuild failed:', err);
     }
   },
 
   selectChannel: async (channelId) => {
     set({ selectedChannelId: channelId });
 
-    if (!get().messages.has(channelId)) {
-      await get().loadMessages(channelId);
+    try {
+      if (!get().messages.has(channelId)) {
+        await get().loadMessages(channelId);
+      }
+    } catch (err) {
+      console.error('[AppStore] selectChannel failed:', err);
     }
   },
 
   loadMessages: async (channelId) => {
-    const msgs = await api.getMessages(channelId);
-    set((state) => {
-      const newMessages = new Map(state.messages);
-      newMessages.set(channelId, msgs.reverse()); // API returns newest first
-      return { messages: newMessages };
-    });
+    try {
+      const msgs = await api.getMessages(channelId);
+      set((state) => {
+        const newMessages = new Map(state.messages);
+        newMessages.set(channelId, [...msgs].reverse());
+        return { messages: newMessages };
+      });
+    } catch (err) {
+      console.error('[AppStore] loadMessages failed:', err);
+    }
   },
 
   addMessage: (message) => {
@@ -120,7 +137,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const msg = { ...channelMsgs[msgIdx] };
       const reactions = [...(msg.reactions || [])];
-      const isMe = userId === api.getToken() ? false : true; // approximate
+      // Check if this reaction is from the current user
+      const currentUserId = localStorage.getItem('user_id');
+      const isMe = userId === currentUserId;
 
       // One reaction per user: remove user's previous reaction from other emojis
       for (let i = reactions.length - 1; i >= 0; i--) {

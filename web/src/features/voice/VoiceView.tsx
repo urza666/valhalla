@@ -23,7 +23,12 @@ export function VoiceView() {
   const [dmChannelId, setDmChannelId] = useState<string | null>(null);
   const [activeView, setActiveView] = useState<'chat' | 'board' | 'wiki' | 'friends'>('chat');
 
-  useEffect(() => { useAppStore.getState().loadGuilds(); }, []);
+  useEffect(() => {
+    console.log('[VoiceView] Mounting, loading guilds...');
+    useAppStore.getState().loadGuilds()
+      .then(() => console.log('[VoiceView] Guilds loaded:', useAppStore.getState().guilds.length))
+      .catch((err) => console.error('[VoiceView] loadGuilds failed:', err));
+  }, []);
 
   // DM open events
   useEffect(() => {
