@@ -3,6 +3,9 @@
  * Uses Valhalla stores (WebSocket events) + api/client.ts (fetch).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { Message as MessageType } from '../../api/client';
+
+const EMPTY_MESSAGES: MessageType[] = [];
 import { useAppStore } from '../../stores/app';
 import { useAuthStore } from '../../stores/auth';
 import { api } from '../../api/client';
@@ -26,7 +29,7 @@ interface Props {
 }
 
 export function ChatArea({ channelId, channelName, guildId, viewMode, onSetViewMode }: Props) {
-  const messages = useAppStore((s) => s.messages.get(channelId) || []);
+  const messages = useAppStore((s) => s.messages.get(channelId) ?? EMPTY_MESSAGES);
   const user = useAuthStore((s) => s.user);
   const endRef = useRef<HTMLDivElement>(null);
   const [replyTo, setReplyTo] = useState<Message | null>(null);

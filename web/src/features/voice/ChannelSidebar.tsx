@@ -11,6 +11,8 @@ import { useAuthStore } from '../../stores/auth';
 import { UserAvatar } from '../../components/ui/UserAvatar';
 import type { Guild, Channel } from '../../api/client';
 
+const EMPTY_CHANNELS: Channel[] = [];
+
 interface Props {
   guild: Guild;
   onChannelSelected?: () => void;
@@ -20,9 +22,12 @@ interface Props {
 
 export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView }: Props) {
   const user = useAuthStore((s) => s.user);
-  const guildChannels = useAppStore((s) => s.channels.get(guild.id) || []);
+  const guildChannels = useAppStore((s) => s.channels.get(guild.id) ?? EMPTY_CHANNELS);
   const selectedChannelId = useAppStore((s) => s.selectedChannelId);
-  const { joinChannel, channelId: voiceChannelId, connected, selfMute, selfDeaf, toggleMute, toggleDeaf, leaveChannel } = useVoiceStore();
+  const voiceChannelId = useVoiceStore((s) => s.channelId);
+  const connected = useVoiceStore((s) => s.connected);
+  const selfMute = useVoiceStore((s) => s.selfMute);
+  const selfDeaf = useVoiceStore((s) => s.selfDeaf);
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState<0 | 2>(0);
@@ -90,7 +95,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
                 <ChannelItem key={ch.id} channel={ch}
                   active={ch.id === selectedChannelId && activeView === 'chat'}
                   onSelect={() => {
-                    if (ch.type === 2) joinChannel(guild.id, ch.id);
+                    if (ch.type === 2) useVoiceStore.getState().joinChannel(guild.id, ch.id);
                     else { useAppStore.getState().selectChannel(ch.id); onSetView('chat'); onChannelSelected?.(); }
                   }} />
               ))}
@@ -114,7 +119,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
         {uncategorized.filter(c => c.type === 2).map((ch) => (
           <VoiceChannelItem key={ch.id} channel={ch}
             isConnected={voiceChannelId === ch.id}
-            onJoin={() => joinChannel(guild.id, ch.id)} />
+            onJoin={() => useVoiceStore.getState().joinChannel(guild.id, ch.id)} />
         ))}
       </div>
 
@@ -131,7 +136,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
               ● Sprache verbunden
             </div>
           </div>
-          <button onClick={leaveChannel} title="Trennen" style={{
+          <button onClick={() => useVoiceStore.getState().leaveChannel()} title="Trennen" style={{
             background: 'rgba(237,66,69,0.2)', border: 'none', borderRadius: 4,
             padding: '4px 8px', cursor: 'pointer', color: '#ed4245',
           }}>
@@ -161,13 +166,13 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
             <div style={{ fontSize: 11, color: 'var(--color-voice-text-muted, #96989d)' }}>Online</div>
           </div>
           <div style={{ display: 'flex', gap: 2 }}>
-            <IconBtn onClick={toggleMute} title={selfMute ? 'Mikrofon ein' : 'Mikrofon aus'} danger={selfMute}>
+            <IconBtn onClick={() => useVoiceStore.getState().toggleMute()} title={selfMute ? 'Mikrofon ein' : 'Mikrofon aus'} danger={selfMute}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z" /><path d="M19 10v2a7 7 0 01-14 0v-2" />
               </svg>
               {selfMute && <Slash />}
             </IconBtn>
-            <IconBtn onClick={toggleDeaf} title={selfDeaf ? 'Audio ein' : 'Audio aus'} danger={selfDeaf}>
+            <IconBtn onClick={() => useVoiceStore.getState().toggleDeaf()} title={selfDeaf ? 'Audio ein' : 'Audio aus'} danger={selfDeaf}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 18v-6a9 9 0 0118 0v6" /><path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3z" /><path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
               </svg>
