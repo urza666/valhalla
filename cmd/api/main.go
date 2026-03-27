@@ -163,9 +163,11 @@ func main() {
 	// Global middleware
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
+	r.Use(middleware.SecurityHeaders)
 	r.Use(middleware.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.MaxBodySize(1 << 20)) // 1 MB max JSON body
+	r.Use(middleware.PaginationLimit(100))
 	r.Use(middleware.CSRFProtection(strings.Split(cfg.AllowedOrigins, ",")))
 	auditLogger := middleware.NewAuditLogger(dbPool, idGen)
 	r.Use(auditLogger.Log)

@@ -9,6 +9,9 @@ import { api } from '../../api/client';
 import { toast } from '../../stores/toast';
 import { useAuthStore } from '../../stores/auth';
 import { UserAvatar } from '../../components/ui/UserAvatar';
+import { ServerSettingsModal } from './ServerSettingsModal';
+import { ChannelSettingsModal } from './ChannelSettingsModal';
+import { InviteModal } from './InviteModal';
 import type { Guild, Channel } from '../../api/client';
 
 const EMPTY_CHANNELS: Channel[] = [];
@@ -31,6 +34,9 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
   const [showCreateChannel, setShowCreateChannel] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [newChannelType, setNewChannelType] = useState<0 | 2>(0);
+  const [showServerSettings, setShowServerSettings] = useState(false);
+  const [editChannel, setEditChannel] = useState<Channel | null>(null);
+  const [inviteChannelId, setInviteChannelId] = useState<string | null>(null);
 
   const categories = guildChannels.filter((c) => c.type === 4);
   const uncategorized = guildChannels.filter((c) => c.type !== 4 && !c.parent_id);
@@ -60,7 +66,7 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{guild.name}</span>
-        {isOwner && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⚙</span>}
+        {isOwner && <span onClick={(e) => { e.stopPropagation(); setShowServerSettings(true); }} style={{ fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>⚙</span>}
       </div>
 
       {/* Channel list */}
@@ -180,6 +186,17 @@ export function ChannelSidebar({ guild, onChannelSelected, activeView, onSetView
             </IconBtn>
           </div>
         </div>
+      )}
+
+      {/* Server settings modal */}
+      <ServerSettingsModal guild={guild} isOpen={showServerSettings} onClose={() => setShowServerSettings(false)} />
+
+      {/* Channel settings modal */}
+      {editChannel && <ChannelSettingsModal channel={editChannel} isOpen={!!editChannel} onClose={() => setEditChannel(null)} />}
+
+      {/* Invite modal */}
+      {inviteChannelId && (
+        <InviteModal channelId={inviteChannelId} channelName={guildChannels.find(c => c.id === inviteChannelId)?.name || ''} isOpen={!!inviteChannelId} onClose={() => setInviteChannelId(null)} />
       )}
 
       {/* Create channel modal */}

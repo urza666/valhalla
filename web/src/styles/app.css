@@ -2385,6 +2385,85 @@ select:focus-visible {
   animation: speakPulse 1.5s infinite;
 }
 
+/* LPP-identical Markdown Styles */
+.md-codeblock {
+  background: rgba(0,0,0,0.3);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: var(--font-code);
+  overflow-x: auto;
+  margin: 0.25rem 0;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.md-code {
+  background: rgba(0,0,0,0.3);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  font-size: 0.82rem;
+  font-family: var(--font-code);
+}
+
+.md-code-lang {
+  font-family: var(--font-code);
+  font-size: 0.8rem;
+}
+
+.md-quote {
+  border-left: 3px solid var(--brand-primary, #c8a84a);
+  padding-left: 0.75rem;
+  margin: 0.25rem 0;
+  color: var(--text-secondary);
+}
+
+.md-link {
+  color: var(--color-voice-link, #00aff4);
+  text-decoration: none;
+}
+.md-link:hover {
+  text-decoration: underline;
+}
+
+.md-inline-img {
+  max-width: 350px;
+  max-height: 300px;
+  border-radius: 8px;
+  display: block;
+  margin: 0.25rem 0;
+}
+
+.md-mention {
+  background: rgba(88,101,242,0.3);
+  color: #dee0fc;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.md-mention:hover {
+  background: rgba(88,101,242,0.5);
+}
+
+.md-spoiler {
+  background: #1e1f22;
+  color: transparent;
+  border-radius: 3px;
+  padding: 0 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.md-spoiler.revealed {
+  background: rgba(255,255,255,0.06);
+  color: inherit;
+}
+
+/* Context menu animation */
+@keyframes ctxFadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* =========================
    Enhanced Responsive Design
    ========================= */

@@ -39,6 +39,7 @@ export function ChatArea({ channelId, channelName, guildId, viewMode, onSetViewM
   const [popout, setPopout] = useState<{ userId: string; x: number; y: number } | null>(null);
   const [hoverMsgId, setHoverMsgId] = useState<string | null>(null);
   const [reactionPickerMsgId, setReactionPickerMsgId] = useState<string | null>(null);
+  const [msgCtxMenu, setMsgCtxMenu] = useState<{ msg: Message; x: number; y: number } | null>(null);
 
   useEffect(() => { useAppStore.getState().loadMessages(channelId); }, [channelId]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length]);
@@ -181,6 +182,7 @@ export function ChatArea({ channelId, channelName, guildId, viewMode, onSetViewM
               }}
               onMouseEnter={() => setHoverMsgId(msg.id)}
               onMouseLeave={() => { setHoverMsgId(null); if (reactionPickerMsgId === msg.id) setReactionPickerMsgId(null); }}
+              onContextMenu={(e) => { e.preventDefault(); setMsgCtxMenu({ msg, x: e.clientX, y: e.clientY }); }}
             >
               {/* Avatar column */}
               <div style={{ width: 36, flexShrink: 0 }}>
@@ -380,6 +382,18 @@ export function ChatArea({ channelId, channelName, guildId, viewMode, onSetViewM
         onReplySent={() => setReplyTo(null)}
       />
 
+      {/* Message context menu (right-click) */}
+      {msgCtxMenu && (
+        <MessageContextMenu
+          msg={msgCtxMenu.msg} x={msgCtxMenu.x} y={msgCtxMenu.y}
+          channelId={channelId}
+          isAuthor={msgCtxMenu.msg.author.id === user?.id}
+          onReply={() => { setReplyTo(msgCtxMenu.msg); setMsgCtxMenu(null); }}
+          onEdit={() => { setEditingId(msgCtxMenu.msg.id); setEditText(msgCtxMenu.msg.content); setMsgCtxMenu(null); }}
+          onClose={() => setMsgCtxMenu(null)}
+        />
+      )}
+
       {/* Profile popout */}
       {popout && (
         <UserProfilePopout userId={popout.userId} x={popout.x} y={popout.y} onClose={() => setPopout(null)} />
@@ -402,5 +416,68 @@ function ActionBtn({ onClick, title, danger, children }: {
     >
       {children}
     </button>
+  );
+}
+
+/** Message Context Menu — LPP-identical right-click menu */
+function MessageContextMenu({ msg, x, y, channelId, isAuthor, onReply, onEdit, onClose }: {
+  msg: Message; x: number; y: number; channelId: string; isAuthor: boolean;
+  onReply: () => void; onEdit: () => void; onClose: () => void;
+}) {
+  useEffect(() => {
+    const h = () => onClose();
+    document.addEventListener('click', h);
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('click', h); document.removeEventListener('keydown', esc); };
+  }, [onClose]);
+
+  const items = [
+    { label: 'Antworten', icon: '↩️', onClick: onReply },
+    { label: 'Reaktion', icon: '😀', onClick: () => { /* handled via hover bar */ onClose(); } },
+    { label: 'Pinnen', icon: '📌', onClick: () => { api.pinMessage(channelId, msg.id).then(() => toast.success('Gepinnt')).catch(() => toast.error('Fehler')); onClose(); } },
+    { label: 'Link kopieren', icon: '🔗', onClick: () => { navigator.clipboard.writeText(`${window.location.origin}/channels/${channelId}/${msg.id}`); toast.success('Link kopiert'); onClose(); } },
+    ...(isAuthor ? [
+      { label: 'Bearbeiten', icon: '✏️', onClick: onEdit },
+      { label: 'Loeschen', icon: '🗑️', danger: true, onClick: () => {
+        if (confirm('Nachricht loeschen?')) {
+          api.deleteMessage(channelId, msg.id).then(() => useAppStore.getState().removeMessage(channelId, msg.id)).catch(() => toast.error('Fehler'));
+        }
+        onClose();
+      }},
+    ] : []),
+    { label: 'Melden', icon: '🚩', danger: true, onClick: () => { toast.info('Nachricht gemeldet'); onClose(); } },
+  ];
+
+  const adjustedX = Math.min(x, window.innerWidth - 220);
+  const adjustedY = Math.min(y, window.innerHeight - items.length * 36 - 16);
+
+  return (
+    <div style={{
+      position: 'fixed', left: adjustedX, top: adjustedY, zIndex: 9999,
+      background: 'var(--color-voice-surface, #1e1f22)',
+      border: '1px solid var(--color-voice-border)',
+      borderRadius: 8, padding: '0.35rem', minWidth: 200,
+      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      animation: 'fadeIn 100ms ease-out',
+    }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {items.map((item, i) => (
+        <button key={i} onClick={item.onClick} style={{
+          display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+          padding: '6px 10px', borderRadius: 4, border: 'none', cursor: 'pointer',
+          background: 'transparent',
+          color: (item as any).danger ? '#ed4245' : 'var(--color-voice-text, #dcddde)',
+          fontSize: 13, textAlign: 'left', fontWeight: 500,
+        }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = (item as any).danger ? 'rgba(237,66,69,0.1)' : 'rgba(88,101,242,0.15)'; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+        >
+          <span style={{ width: 20, textAlign: 'center' }}>{item.icon}</span>
+          {item.label}
+        </button>
+      ))}
+    </div>
   );
 }

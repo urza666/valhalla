@@ -161,6 +161,9 @@ func (h *Handler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Input sanitization: strip HTML tags to prevent stored XSS
+	req.Content = stripHTMLTags(req.Content)
+
 	// Permission check: user must be guild member
 	guildID := h.repo.GetChannelGuildID(r.Context(), channelID)
 	if guildID != 0 && !h.isGuildMember(r.Context(), user.ID, guildID) {
@@ -615,4 +618,26 @@ func (h *Handler) ServeAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.ServeFile(w, r, filePath)
+}
+
+// stripHTMLTags removes all HTML tags from input to prevent stored XSS.
+// Preserves Discord-style markdown (**bold**, *italic*, ||spoiler||, `code`).
+func stripHTMLTags(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	inTag := false
+	for _, r := range s {
+		if r == '<' {
+			inTag = true
+			continue
+		}
+		if r == '>' && inTag {
+			inTag = false
+			continue
+		}
+		if !inTag {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
